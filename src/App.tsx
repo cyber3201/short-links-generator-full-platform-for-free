@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import { LoginPage } from "./components/ui/animated-characters-login-page";
 import { ProfilePage } from "./components/ui/profile-page";
 import { LinkManagementTable } from "./components/ui/link-management-table";
+import { ThemeToggle } from "./components/ui/theme-toggle";
 import { supabase, hasSupabaseKeys } from "./lib/supabase";
 
 type HistoryItem = {
@@ -261,7 +262,7 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <>
+              <div className="flex items-center gap-2 sm:gap-4">
                 <button onClick={() => setView('login')} className="text-sm font-medium hover:text-foreground transition-colors hidden sm:block">Log in</button>
                 <button onClick={() => setView('login')} className="bg-primary text-primary-foreground text-sm font-medium px-5 py-2 rounded-full border border-transparent hover:bg-background hover:text-primary hover:border-primary transition-all shadow-sm sm:hidden">
                   Log in
@@ -269,8 +270,10 @@ export default function App() {
                 <button onClick={() => setView('signup')} className="hidden sm:block bg-primary text-primary-foreground text-sm font-medium px-5 py-2 rounded-full border border-transparent hover:bg-background hover:text-primary hover:border-primary transition-all shadow-sm">
                   Sign up
                 </button>
-              </>
+              </div>
             )}
+            <div className="w-px h-6 bg-border mx-1 sm:mx-2 line-clamp-1"></div>
+            <ThemeToggle />
           </div>
         </div>
       </header>
