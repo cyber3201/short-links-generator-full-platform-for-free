@@ -1,59 +1,44 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Lock, ArrowRight, XCircle } from 'lucide-react';
 
 export default function RedirectHandler() {
   const { shortCode } = useParams<{ shortCode: string }>();
   const [error, setError] = useState<string | null>(null);
+  const [needsPassword, setNeedsPassword] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     const fetchOriginalUrl = async () => {
       if (!shortCode) return;
 
       try {
-        const { data, error: fetchError } = await supabase
+        // First check if it exists and requires a password to avoid leaking the original URL immediately
+        const { data: initialData, error: initialError } = await supabase
           .from('urls')
-          .select('id, original_url, clicks, user_id, is_active')
+          .select('id, is_active, is_password_protected, original_url')
           .eq('short_code', shortCode)
           .single();
 
-        if (fetchError || !data) {
-          console.error("Link lookup failed:", fetchError);
+        if (initialError || !initialData) {
           setError("Link not found or has expired.");
           return;
         }
 
-        if (data.is_active === false) {
+        if (initialData.is_active === false) {
           setError("This link has been temporarily disabled by its owner.");
           return;
         }
 
-        const { data: sessionData } = await supabase.auth.getSession();
-        const currentUser = sessionData.session?.user;
-
-        // Condition to restrict incrementing clicks for the owner
-        if (!currentUser || currentUser.id !== data.user_id) {
-          // Increment the click count asynchronously
-          supabase
-            .from('urls')
-            .update({ clicks: (data.clicks || 0) + 1 })
-            .eq('id', data.id)
-            .then(({ error: updateError }) => {
-               if (updateError) console.error("Failed to update clicks:", updateError);
-            });
-
-          // Insert into analytics table
-          supabase
-            .from('clicks')
-            .insert([{ url_id: data.id }])
-            .then(({ error: clickError }) => {
-               if (clickError) console.error("Failed to insert click record:", clickError);
-            });
+        if (initialData.is_password_protected) {
+          setNeedsPassword(true);
+          return;
         }
 
-        // Perform the redirect
-        window.location.href = data.original_url;
+        // If not protected, proceed seamlessly
+        await processAndRedirect(initialData.id, initialData.original_url);
 
       } catch (err: any) {
         console.error("Unexpected error during redirect lookup:", err);
@@ -64,15 +49,136 @@ export default function RedirectHandler() {
     fetchOriginalUrl();
   }, [shortCode]);
 
+  const processAndRedirect = async (urlId: string, destinationUrl: string, existingClicks?: number, linkUserId?: string) => {
+    try {
+      if (existingClicks === undefined || linkUserId === undefined) {
+          // Re-fetch clicks info since we didn't initially grab it to avoid messy typing overhead here, or just grab the session
+          const { data } = await supabase.from('urls').select('clicks, user_id').eq('id', urlId).single();
+          if (data) {
+             existingClicks = data.clicks;
+             linkUserId = data.user_id;
+          }
+      }
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const currentUser = sessionData.session?.user;
+
+      // Condition to restrict incrementing clicks for the owner
+      if (!currentUser || currentUser.id !== linkUserId) {
+        supabase
+          .from('urls')
+          .update({ clicks: (existingClicks || 0) + 1 })
+          .eq('id', urlId)
+          .then();
+
+        supabase
+          .from('clicks')
+          .insert([{ url_id: urlId }])
+          .then();
+      }
+
+      window.location.href = destinationUrl;
+    } catch (e) {
+      console.error(e);
+      window.location.href = destinationUrl; // fallback redirect
+    }
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!passwordInput || !shortCode) return;
+
+      setIsVerifying(true);
+      setError(null);
+
+      try {
+          // Send to Edge RPC to verify the password against the secure hash
+          const { data: rpcResult, error: rpcError } = await supabase.rpc('verify_and_get_url', {
+             p_short_code: shortCode,
+             p_password: passwordInput
+          });
+
+          if (rpcError) {
+             setError("Server error during verification.");
+             setIsVerifying(false);
+             return;
+          }
+
+          if (!rpcResult.success) {
+             setError(rpcResult.error || "Invalid password.");
+             setIsVerifying(false);
+             return;
+          }
+
+          // Verified successfully!
+          await processAndRedirect(rpcResult.id, rpcResult.url, rpcResult.clicks, rpcResult.user_id);
+      } catch (e) {
+          setError("Unexpected verification error.");
+          setIsVerifying(false);
+      }
+  };
+
+  if (needsPassword) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4 relative overflow-hidden">
+        {/* Subtle animated background grid for style */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+        
+        <form onSubmit={handlePasswordSubmit} className="bg-card/90 border border-border/50 shadow-2xl rounded-3xl p-8 max-w-md w-full text-center backdrop-blur-xl z-10 animate-in fade-in zoom-in-95 duration-300">
+          <div className="bg-primary/10 text-primary mb-6 p-4 rounded-full inline-flex mx-auto border border-primary/20 shadow-inner">
+             <Lock className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold mb-3 tracking-tight">Protected Link</h2>
+          <p className="text-muted-foreground mb-8 text-sm leading-relaxed px-4">
+            This short link is secured by its creator. Please enter the password to gain access.
+          </p>
+          
+          <div className="space-y-4">
+             <div className="relative text-left">
+               <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-muted-foreground">
+                 <Lock className="w-4 h-4" />
+               </div>
+               <input 
+                 type="password" 
+                 placeholder="Enter password..." 
+                 value={passwordInput}
+                 onChange={(e) => { setPasswordInput(e.target.value); setError(null); }}
+                 className="w-full h-12 pl-12 pr-4 rounded-xl bg-background/50 border border-input/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all text-sm"
+                 required
+               />
+             </div>
+             
+             {error && (
+               <div className="flex items-center gap-2 text-red-500 text-sm bg-red-500/10 p-3 rounded-xl border border-red-500/20 animate-in slide-in-from-top-1 text-left">
+                 <XCircle className="w-4 h-4 shrink-0" />
+                 <span>{error}</span>
+               </div>
+             )}
+             
+             <button 
+               type="submit"
+               disabled={isVerifying || !passwordInput}
+               className="w-full h-12 bg-primary text-primary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-md disabled:bg-primary/50 disabled:cursor-not-allowed"
+             >
+               {isVerifying ? (
+                 <Loader2 className="w-5 h-5 animate-spin" />
+               ) : (
+                 <>Unlock Link <ArrowRight className="w-4 h-4" /></>
+               )}
+             </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
   // If there's an error, show it. Otherwise, show a loading spinner.
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4">
         <div className="bg-card/80 border border-border/50 shadow-2xl rounded-2xl p-8 max-w-md w-full text-center backdrop-blur-md">
           <div className="text-red-500 mb-4 bg-red-500/10 p-4 rounded-full inline-block">
-             <svg xmlns="http://www.w3.org/2000/Url" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-8 h-8">
-               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-             </svg>
+             <XCircle className="w-8 h-8" />
           </div>
           <h2 className="text-2xl font-bold mb-2">Oops!</h2>
           <p className="text-muted-foreground mb-6">{error}</p>

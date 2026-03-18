@@ -5,7 +5,7 @@ import { Button } from "./button";
 import { Input } from "./input";
 import { Label } from "./label";
 import { Checkbox } from "./checkbox";
-import { Eye, EyeOff, Mail, Sparkles, X, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, Mail, Sparkles, X, ArrowLeft, Check } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { supabase } from "../../lib/supabase";
 
@@ -311,28 +311,33 @@ export function LoginPage({
     return "";
   };
 
-  const getPasswordError = (val: string) => {
-    if (!val) return "";
-    if (val.length < 8) return "Password must be at least 8 characters.";
-    if (!/\d/.test(val)) return "Password must contain at least 1 number.";
-    return "";
-  };
-
   const emailErrorMsg = getEmailError(email);
-  const passwordErrorMsg = getPasswordError(password);
+
+  const isPasswordValid = password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     
-    if (emailErrorMsg || passwordErrorMsg) {
-       setError("Please clear the validation errors before proceeding.");
+    if (emailErrorMsg) {
+       setError(emailErrorMsg);
        return;
     }
 
-    if (type === 'signup' && password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
+    if (type === 'signup') {
+      if (!isPasswordValid) {
+         setError("Please ensure your password meets all requirements.");
+         return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
+    } else if (type === 'login') {
+      if (!password) {
+        setError("Password is required.");
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -661,10 +666,7 @@ export function LoginPage({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className={cn(
-                    "h-12 pr-10 bg-background border-border/60 focus:border-primary",
-                    passwordErrorMsg ? "border-red-500/50 focus:border-red-500/50" : ""
-                  )}
+                  className="h-12 pr-10 bg-background border-border/60 focus:border-primary"
                 />
                 <button
                   type="button"
@@ -678,8 +680,22 @@ export function LoginPage({
                   )}
                 </button>
               </div>
-              {type === 'signup' && passwordErrorMsg && <p className="text-xs text-red-500 font-medium ml-1">Weak: {passwordErrorMsg}</p>}
-              {type === 'signup' && !passwordErrorMsg && String(password).length > 0 && <p className="text-xs text-green-500 font-medium ml-1">Strong password</p>}
+              {type === 'signup' && (
+                <div className="mt-2 space-y-1.5 p-2 bg-muted/30 rounded-lg border border-border/50">
+                  <p className={cn("text-xs flex items-center gap-1.5 font-medium transition-colors duration-200", password.length >= 8 ? "text-green-500" : "text-muted-foreground/70")}>
+                    <Check className={cn("w-3.5 h-3.5 transition-opacity duration-200", password.length >= 8 ? "opacity-100" : "opacity-40")} /> At least 8 characters
+                  </p>
+                  <p className={cn("text-xs flex items-center gap-1.5 font-medium transition-colors duration-200", /[A-Z]/.test(password) ? "text-green-500" : "text-muted-foreground/70")}>
+                    <Check className={cn("w-3.5 h-3.5 transition-opacity duration-200", /[A-Z]/.test(password) ? "opacity-100" : "opacity-40")} /> Contains uppercase letter
+                  </p>
+                  <p className={cn("text-xs flex items-center gap-1.5 font-medium transition-colors duration-200", /[a-z]/.test(password) ? "text-green-500" : "text-muted-foreground/70")}>
+                    <Check className={cn("w-3.5 h-3.5 transition-opacity duration-200", /[a-z]/.test(password) ? "opacity-100" : "opacity-40")} /> Contains lowercase letter
+                  </p>
+                  <p className={cn("text-xs flex items-center gap-1.5 font-medium transition-colors duration-200", /\d/.test(password) ? "text-green-500" : "text-muted-foreground/70")}>
+                    <Check className={cn("w-3.5 h-3.5 transition-opacity duration-200", /\d/.test(password) ? "opacity-100" : "opacity-40")} /> Contains number
+                  </p>
+                </div>
+              )}
             </div>
             )}
 
@@ -696,7 +712,23 @@ export function LoginPage({
                     required
                     className="h-12 pr-10 bg-background border-border/60 focus:border-primary"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="size-5" />
+                    ) : (
+                      <Eye className="size-5" />
+                    )}
+                  </button>
                 </div>
+                {confirmPassword.length > 0 && (
+                  <p className={cn("text-xs font-semibold ml-1 mt-1 transition-colors duration-200", password === confirmPassword ? "text-green-500" : "text-red-500")}>
+                    {password === confirmPassword ? "Passwords match" : "Passwords do not match"}
+                  </p>
+                )}
               </div>
             )}
 

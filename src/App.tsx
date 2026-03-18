@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { cn } from './lib/utils';
-import { Link, ArrowRight, Scissors, Copy, Check, Github, History, X, Plus, Search, BarChart2, MapPin, Linkedin, User as UserIcon, AlertTriangle, Activity, LogOut, Loader2 } from "lucide-react";
+import { Link, ArrowRight, Scissors, Copy, Check, Github, History, X, Plus, Search, BarChart2, MapPin, Linkedin, User as UserIcon, AlertTriangle, Activity, LogOut, Loader2, Lock } from "lucide-react";
 import { LoginPage } from "./components/ui/animated-characters-login-page";
 import { ProfilePage } from "./components/ui/profile-page";
 import { LinkManagementTable } from "./components/ui/link-management-table";
 import { ThemeToggle } from "./components/ui/theme-toggle";
 import { InfiniteGridBackground } from "./components/ui/infinite-grid";
 import { ShinyButton } from "./components/ui/shiny-button";
+import { GlowingEffect } from "./components/ui/glowing-effect";
+import { HighlightedText } from "./components/ui/highlighted-text";
 import { supabase, hasSupabaseKeys } from "./lib/supabase";
 
 type HistoryItem = {
@@ -25,6 +27,8 @@ export default function App() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isProtected, setIsProtected] = useState(false);
+  const [linkPassword, setLinkPassword] = useState("");
   const [view, setView] = useState<'home' | 'login' | 'signup' | 'terms' | 'privacy' | 'profile' | 'dashboard'>('home');
   const [user, setUser] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -88,32 +92,28 @@ export default function App() {
     const newShortUrl = `${baseUrl}/${shortCode}`;
 
     // If user is logged in, attach their ID, otherwise it's null (anonymous)
-    const urlData = {
-      original_url: url,
-      short_code: shortCode,
-      short_url: newShortUrl,
-      user_id: user?.id || null
-    };
+    const { data: rpcData, error } = await supabase.rpc('create_short_url_secure', {
+      p_original_url: url,
+      p_short_code: shortCode,
+      p_short_url: newShortUrl,
+      p_user_id: user?.id || null,
+      p_password: isProtected ? linkPassword : null
+    });
 
-    const { data, error } = await supabase
-      .from('urls')
-      .insert([urlData])
-      .select();
-
-    if (error) {
+    if (error || !rpcData) {
         console.error("Error inserting URL:", error);
-        alert(`Failed to create short link: ${error.message || 'Unknown error'}`);
+        alert(`Failed to create short link: ${error?.message || 'Unknown error'}`);
     } else {
         setShortUrl(newShortUrl);
-        if (data && data[0]) {
-            setHistory(prev => [{ 
-                id: data[0].id, 
-                originalUrl: url, 
-                shortUrl: newShortUrl,
-                clicks: 0, 
-                topLocation: 'Unknown'
-            }, ...prev]);
-        }
+        setHistory(prev => [{ 
+            id: rpcData.id, 
+            originalUrl: url, 
+            shortUrl: newShortUrl,
+            clicks: 0, 
+            topLocation: 'Unknown'
+        }, ...prev]);
+        setIsProtected(false);
+        setLinkPassword("");
     }
     setIsShortening(false);
   };
@@ -153,6 +153,8 @@ export default function App() {
     setUrl("");
     setShortUrl("");
     setCopied(false);
+    setIsProtected(false);
+    setLinkPassword("");
   };
 
   // Handle auth form success
@@ -302,38 +304,70 @@ export default function App() {
                 </span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                A simple, fast, and secure URL shortener. Transform long, ugly links into clean, memorable ones in seconds.
+                A simple, fast, and secure URL shortener. Transform long, ugly links into <HighlightedText from="left" delay={0.3} className="text-foreground">clean, memorable ones in seconds.</HighlightedText>
               </p>
             </div>
 
             <div className="space-y-6">
               <div className="bg-card/80 border border-border/50 shadow-2xl rounded-[2rem] p-3 md:p-4 max-w-2xl mx-auto backdrop-blur-xl">
                 {!shortUrl ? (
-                  <form onSubmit={handleShorten} className="flex flex-col md:flex-row gap-3">
-                    <div className="relative flex-1">
-                      <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-muted-foreground">
-                        <Link className="w-5 h-5" />
+                  <form onSubmit={handleShorten} className="flex flex-col gap-4">
+                    <div className="flex flex-col md:flex-row gap-3">
+                      <div className="relative flex-1">
+                        <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-muted-foreground">
+                          <Link className="w-5 h-5" />
+                        </div>
+                        <input
+                          type="url"
+                          required
+                          placeholder="Paste your long link here..."
+                          value={url}
+                          onChange={(e) => setUrl(e.target.value)}
+                          className="w-full h-16 pl-14 pr-4 rounded-2xl bg-background/50 border border-input/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all text-lg shadow-inner"
+                        />
                       </div>
-                      <input
-                        type="url"
-                        required
-                        placeholder="Paste your long link here..."
-                        value={url}
-                        onChange={(e) => setUrl(e.target.value)}
-                        className="w-full h-16 pl-14 pr-4 rounded-2xl bg-background/50 border border-input/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all text-lg shadow-inner"
-                      />
+                      <ShinyButton
+                        type="submit"
+                        disabled={isShortening}
+                        className="h-16 px-8 text-lg font-bold rounded-2xl flex items-center justify-center gap-2 whitespace-nowrap shadow-md focus:outline-none shrink-0"
+                      >
+                        {isShortening ? (
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-4" />
+                        ) : (
+                          "Shorten"
+                        )}
+                      </ShinyButton>
                     </div>
-                    <ShinyButton
-                      type="submit"
-                      disabled={isShortening}
-                      className="h-16 px-8 text-lg font-bold rounded-2xl flex items-center justify-center gap-2 whitespace-nowrap shadow-md focus:outline-none"
-                    >
-                      {isShortening ? (
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-4" />
-                      ) : (
-                        "Shorten"
+
+                    <div className="flex flex-col gap-3 px-2">
+                      <div className="flex items-center gap-2">
+                         <input 
+                           type="checkbox" 
+                           id="protected" 
+                           checked={isProtected} 
+                           onChange={(e) => setIsProtected(e.target.checked)} 
+                           className="w-4 h-4 accent-primary cursor-pointer" 
+                         />
+                         <label htmlFor="protected" className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 cursor-pointer hover:text-foreground transition-colors">
+                           <Lock className="w-4 h-4" /> Password Protect Link
+                         </label>
+                      </div>
+                      {isProtected && (
+                        <div className="relative animate-in slide-in-from-top-2 duration-200">
+                          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-muted-foreground">
+                            <Lock className="w-4 h-4" />
+                          </div>
+                          <input 
+                            type="password" 
+                            placeholder="Set a secure password to restrict access..." 
+                            value={linkPassword}
+                            onChange={(e) => setLinkPassword(e.target.value)}
+                            className="w-full h-12 pl-12 pr-4 rounded-xl bg-background/30 border border-input/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all text-sm"
+                            required={isProtected}
+                          />
+                        </div>
                       )}
-                    </ShinyButton>
+                    </div>
                   </form>
                 ) : (
                   <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-300 p-2">
@@ -384,26 +418,61 @@ export default function App() {
             </div>
             
             <div className="pt-16 grid grid-cols-1 md:grid-cols-3 gap-10 text-left max-w-5xl mx-auto">
-              <div className="space-y-3 p-6 rounded-3xl hover:bg-muted/30 transition-colors border border-transparent hover:border-border/50">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-5">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              {/* Lightning Fast Card */}
+              <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-border p-2 md:rounded-[1.5rem] md:p-3 list-none">
+                <GlowingEffect
+                  spread={40}
+                  glow={true}
+                  disabled={false}
+                  proximity={64}
+                  inactiveZone={0.01}
+                  borderWidth={3}
+                />
+                <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-xl border-[0.75px] bg-background p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:p-6 space-y-3 hover:bg-muted/30 transition-colors">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-2 border-[0.75px] border-border">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                  </div>
+                  <h3 className="font-semibold text-xl tracking-tight text-foreground">Lightning Fast</h3>
+                  <p className="text-muted-foreground text-sm md:text-base leading-[1.375rem] text-balance">Generate short links instantly with our globally distributed edge infrastructure.</p>
                 </div>
-                <h3 className="font-semibold text-xl tracking-tight">Lightning Fast</h3>
-                <p className="text-muted-foreground leading-relaxed">Generate short links instantly with our globally distributed edge infrastructure.</p>
               </div>
-              <div className="space-y-3 p-6 rounded-3xl hover:bg-muted/30 transition-colors border border-transparent hover:border-border/50">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-5">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+
+              {/* Secure & Reliable Card */}
+              <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-border p-2 md:rounded-[1.5rem] md:p-3 list-none">
+                <GlowingEffect
+                  spread={40}
+                  glow={true}
+                  disabled={false}
+                  proximity={64}
+                  inactiveZone={0.01}
+                  borderWidth={3}
+                />
+                <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-xl border-[0.75px] bg-background p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:p-6 space-y-3 hover:bg-muted/30 transition-colors">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-2 border-[0.75px] border-border">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  </div>
+                  <h3 className="font-semibold text-xl tracking-tight text-foreground">Secure & Reliable</h3>
+                  <p className="text-muted-foreground text-sm md:text-base leading-[1.375rem] text-balance">Every link is encrypted and scanned for malware to protect you and your users.</p>
                 </div>
-                <h3 className="font-semibold text-xl tracking-tight">Secure & Reliable</h3>
-                <p className="text-muted-foreground leading-relaxed">Every link is encrypted and scanned for malware to protect you and your users.</p>
               </div>
-              <div className="space-y-3 p-6 rounded-3xl hover:bg-muted/30 transition-colors border border-transparent hover:border-border/50">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-5">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+
+              {/* Detailed Analytics Card */}
+              <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-border p-2 md:rounded-[1.5rem] md:p-3 list-none">
+                <GlowingEffect
+                  spread={40}
+                  glow={true}
+                  disabled={false}
+                  proximity={64}
+                  inactiveZone={0.01}
+                  borderWidth={3}
+                />
+                <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-xl border-[0.75px] bg-background p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:p-6 space-y-3 hover:bg-muted/30 transition-colors">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-2 border-[0.75px] border-border">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                  </div>
+                  <h3 className="font-semibold text-xl tracking-tight text-foreground">Detailed Analytics</h3>
+                  <p className="text-muted-foreground text-sm md:text-base leading-[1.375rem] text-balance">Track clicks, geographic data, and referrers for every link you create in real-time.</p>
                 </div>
-                <h3 className="font-semibold text-xl tracking-tight">Detailed Analytics</h3>
-                <p className="text-muted-foreground leading-relaxed">Track clicks, geographic data, and referrers for every link you create in real-time.</p>
               </div>
             </div>
           </div>

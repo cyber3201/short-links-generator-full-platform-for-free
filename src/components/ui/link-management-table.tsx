@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Power, Play, Link, Calendar, Globe, MousePointerClick, Activity, Copy } from "lucide-react";
+import { X, Power, Play, Link, Calendar, Globe, MousePointerClick, Activity, Copy, Lock } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 export interface ShortLink {
@@ -14,6 +14,7 @@ export interface ShortLink {
   clicks: number;
   top_location: string;
   is_active: boolean;
+  is_password_protected: boolean;
   number: string; // generated for display
 }
 
@@ -169,9 +170,6 @@ export function LinkManagementTable({
     return <div className="text-center py-10 text-muted-foreground animate-pulse">Loading dashboard...</div>;
   }
 
-  if (links.length === 0) {
-     return <div className="text-center py-10 text-muted-foreground">You haven't created any links yet.</div>;
-  }
 
   return (
     <div className={`w-full mx-auto mt-10 ${className}`}>
@@ -210,7 +208,18 @@ export function LinkManagementTable({
               <div className="col-span-1 text-right">Status</div>
             </div>
 
-            {links.map((link) => (
+            {links.length === 0 ? (
+                <div className="text-center py-16 flex flex-col items-center gap-4 bg-muted/20 rounded-2xl border border-dashed border-border mt-4">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                    <Link className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-bold text-foreground">No links yet</h3>
+                    <p className="text-muted-foreground font-medium text-sm max-w-sm">You haven't shortened any links yet. Head to the home page to create your very first one!</p>
+                  </div>
+                </div>
+            ) : (
+              links.map((link) => (
               <motion.div
                 key={link.id}
                 variants={{
@@ -257,6 +266,11 @@ export function LinkManagementTable({
                       <span className="text-primary font-mono text-sm bg-primary/5 px-2.5 py-1 rounded-md border border-primary/10 truncate">
                         /{link.short_code}
                       </span>
+                      {link.is_password_protected && (
+                         <div className="bg-amber-500/10 text-amber-500 p-1.5 rounded-md border border-amber-500/20" title="Password Protected">
+                           <Lock className="w-3.5 h-3.5" />
+                         </div>
+                      )}
                       <button 
                         onClick={(e) => handleCopy(e, link.short_url)}
                         className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors shrink-0"
@@ -291,6 +305,11 @@ export function LinkManagementTable({
                         <span className="text-primary font-mono text-xs font-semibold tracking-wider bg-primary/5 px-2.5 py-1 rounded-md border border-primary/10">
                           /{link.short_code}
                         </span>
+                        {link.is_password_protected && (
+                           <div className="bg-amber-500/10 text-amber-500 p-1 rounded-md border border-amber-500/20" title="Password Protected">
+                             <Lock className="w-3.5 h-3.5" />
+                           </div>
+                        )}
                         <button 
                           onClick={(e) => handleCopy(e, link.short_url)}
                           className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors"
@@ -335,7 +354,8 @@ export function LinkManagementTable({
                   </div>
                 </motion.div>
               </motion.div>
-            ))}
+              ))
+            )}
           </motion.div>
         </div>
 
