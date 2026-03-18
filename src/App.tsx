@@ -205,10 +205,7 @@ export default function App() {
             className="flex items-center justify-start gap-2 font-bold text-xl sm:text-2xl tracking-tight cursor-pointer w-1/2"
             onClick={() => setView('home')}
           >
-            <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
-              <Scissors className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <span className="hidden sm:inline">THE NAJEM</span>
+            <img src="https://najemholding.com/wp-content/uploads/2025/02/Logo-NH-White-crop.png" alt="NAJEM HOLDING" className="h-7 sm:h-9 object-contain drop-shadow-md" />
           </div>
           <div className="flex justify-end items-center gap-2 sm:gap-4">
             {user ? (
@@ -290,7 +287,7 @@ export default function App() {
 
         {view === 'dashboard' && user && (
           <div className="w-full max-w-[1400px] animate-in fade-in duration-300">
-            <LinkManagementTable userId={user.id} />
+            <LinkManagementTable userId={user.id} onCreateNew={() => setView('home')} />
           </div>
         )}
 
@@ -483,7 +480,7 @@ export default function App() {
             <h2 className="text-3xl font-bold mb-6">Terms of Use</h2>
             <div className="space-y-6 text-muted-foreground leading-relaxed">
               <p>
-                Welcome to THE NAJEM. By accessing or using our URL shortening service, you agree to be bound by these Terms of Use. If you disagree with any part of the terms, you may not access the service.
+                Welcome to NAJEM HOLDING. By accessing or using our URL shortening service, you agree to be bound by these Terms of Use. If you disagree with any part of the terms, you may not access the service.
               </p>
               <h3 className="text-xl font-semibold text-foreground">1. Acceptable Use</h3>
               <p>
@@ -512,7 +509,7 @@ export default function App() {
             <h2 className="text-3xl font-bold mb-6">Privacy Policy</h2>
             <div className="space-y-6 text-muted-foreground leading-relaxed">
               <p>
-                Your privacy is important to us. It is THE NAJEM's policy to respect your privacy regarding any information we may collect from you across our website and other sites we own and operate.
+                Your privacy is important to us. It is NAJEM HOLDING's policy to respect your privacy regarding any information we may collect from you across our website and other sites we own and operate.
               </p>
               <h3 className="text-xl font-semibold text-foreground">1. Information We Collect</h3>
               <p>
@@ -542,10 +539,7 @@ export default function App() {
         <footer className="relative z-10 border-t border-border/40 bg-background/60 backdrop-blur-xl py-10">
           <div className="container mx-auto max-w-6xl px-4 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2 font-bold text-lg tracking-tight">
-              <div className="bg-primary text-primary-foreground p-1 rounded-md">
-                <Scissors className="w-4 h-4" />
-              </div>
-              THE NAJEM
+              <img src="https://najemholding.com/wp-content/uploads/2025/02/Logo-NH-White-crop.png" alt="NAJEM HOLDING" className="h-5 sm:h-6 object-contain opacity-80 hover:opacity-100 transition-opacity" />
             </div>
             <div className="flex items-center gap-4 text-muted-foreground flex-wrap justify-center">
               <button onClick={() => setView('terms')} className="hover:text-foreground transition-colors text-muted-foreground border border-border px-3 py-1 rounded-md text-sm font-medium">Terms of Use</button>

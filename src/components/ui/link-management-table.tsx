@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Power, Play, Link, Calendar, Globe, MousePointerClick, Activity, Copy, Lock } from "lucide-react";
+import { X, Power, Play, Link, Calendar, Globe, MousePointerClick, Activity, Copy, Lock, Plus, Trash2, Loader2 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 export interface ShortLink {
@@ -21,16 +21,19 @@ export interface ShortLink {
 interface LinkManagementTableProps {
   userId: string;
   className?: string;
+  onCreateNew?: () => void;
 }
 
 export function LinkManagementTable({
   userId,
-  className = ""
+  className = "",
+  onCreateNew
 }: LinkManagementTableProps) {
   const [links, setLinks] = useState<ShortLink[]>([]);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
   const [selectedLink, setSelectedLink] = useState<ShortLink | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLinks();
@@ -74,6 +77,30 @@ export function LinkManagementTable({
       console.error("Failed to update status", error);
       fetchLinks(); // Revert on failure
     }
+  };
+
+  const handleDelete = async (linkId: string) => {
+    if (!window.confirm("Are you sure you want to permanently delete this link? This will break any existing URLs shared online.")) {
+      return;
+    }
+    
+    setIsDeleting(linkId);
+
+    const { error } = await supabase
+      .from('urls')
+      .delete()
+      .eq('id', linkId);
+
+    if (error) {
+      console.error("Failed to delete link", error);
+      alert("Failed to delete the link. Please try again.");
+    } else {
+      setLinks(prev => prev.filter(l => l.id !== linkId));
+      if (selectedLink?.id === linkId) {
+        setSelectedLink(null);
+      }
+    }
+    setIsDeleting(null);
   };
 
   const openLinkModal = (link: ShortLink) => {
@@ -171,6 +198,28 @@ export function LinkManagementTable({
   }
 
 
+  if (links.length === 0) {
+    return (
+      <div className={`w-full mx-auto mt-10 ${className}`}>
+        <div className="relative border border-border/30 rounded-2xl p-4 sm:p-6 bg-card/60 backdrop-blur-xl shadow-xl flex flex-col items-center justify-center py-20 gap-6">
+          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+            <Link className="w-10 h-10" />
+          </div>
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">No links found</h2>
+            <p className="text-muted-foreground font-medium max-w-sm">You haven't shortened any links yet. Create your first link to see tracking analytics here.</p>
+          </div>
+          <button 
+             onClick={onCreateNew}
+             className="mt-4 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-md"
+          >
+            <Plus className="w-5 h-5" /> Generate Short Link
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`w-full mx-auto mt-10 ${className}`}>
       <div className="relative border border-border/30 rounded-2xl p-4 sm:p-6 bg-card/60 backdrop-blur-xl shadow-xl">
@@ -182,8 +231,17 @@ export function LinkManagementTable({
               <h2 className="text-xl font-bold tracking-tight text-foreground">Link Analytics Dashboard</h2>
             </div>
           </div>
-          <div className="text-sm font-medium text-muted-foreground bg-background/50 px-4 py-2 rounded-full border border-border/50">
-            {links.filter(s => s.is_active).length} Active • {links.filter(s => !s.is_active).length} Disabled
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="text-sm font-medium text-muted-foreground bg-background/50 px-4 py-2 rounded-full border border-border/50">
+              {links.filter(s => s.is_active).length} Active • {links.filter(s => !s.is_active).length} Disabled
+            </div>
+            <button 
+               onClick={onCreateNew}
+               className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground font-semibold rounded-full hover:bg-primary/90 transition-all shadow-sm text-sm"
+               title="Create New Link"
+            >
+              <Plus className="w-4 h-4" /> New Link
+            </button>
           </div>
         </div>
 
@@ -208,18 +266,8 @@ export function LinkManagementTable({
               <div className="col-span-1 text-right">Status</div>
             </div>
 
-            {links.length === 0 ? (
-                <div className="text-center py-16 flex flex-col items-center gap-4 bg-muted/20 rounded-2xl border border-dashed border-border mt-4">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                    <Link className="w-8 h-8" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-bold text-foreground">No links yet</h3>
-                    <p className="text-muted-foreground font-medium text-sm max-w-sm">You haven't shortened any links yet. Head to the home page to create your very first one!</p>
-                  </div>
-                </div>
-            ) : (
-              links.map((link) => (
+            {/* Empty state embedded logic is now moved upwards for better UX */}
+            {links.map((link) => (
               <motion.div
                 key={link.id}
                 variants={{
@@ -354,8 +402,7 @@ export function LinkManagementTable({
                   </div>
                 </motion.div>
               </motion.div>
-              ))
-            )}
+            ))}
           </motion.div>
         </div>
 
@@ -404,7 +451,7 @@ export function LinkManagementTable({
                 <div className="flex items-center gap-3">
                   {selectedLink.is_active ? (
                     <motion.button
-                      className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded-xl text-sm font-semibold transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 rounded-xl text-sm font-semibold transition-colors"
                       onClick={() => handleStatusChange(selectedLink.id, false)}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
@@ -423,7 +470,23 @@ export function LinkManagementTable({
                   )}
 
                   <motion.button
-                    className="w-10 h-10 bg-background hover:bg-muted rounded-full flex items-center justify-center border border-border/50 text-muted-foreground ml-2 shadow-sm"
+                    className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded-xl text-sm font-semibold transition-colors shrink-0"
+                    onClick={() => handleDelete(selectedLink.id)}
+                    disabled={isDeleting === selectedLink.id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    title="Permanently delete link"
+                  >
+                    {isDeleting === selectedLink.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                    <span className="hidden sm:inline">Delete</span>
+                  </motion.button>
+
+                  <motion.button
+                    className="w-10 h-10 bg-background hover:bg-muted rounded-full flex items-center justify-center border border-border/50 text-muted-foreground ml-2 shadow-sm shrink-0"
                     onClick={closeLinkModal}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
