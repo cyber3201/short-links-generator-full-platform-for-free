@@ -1,7 +1,6 @@
-import { DottedSurface } from "./components/ui/dotted-surface";
+import React, { useState, useEffect, useCallback } from "react";
 import { cn } from './lib/utils';
-import { Link, ArrowRight, Scissors, Copy, Check, Github, History, X, Plus, Search, BarChart2, MapPin, Linkedin, User as UserIcon, AlertTriangle, Activity, LogOut } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { Link, ArrowRight, Scissors, Copy, Check, Github, History, X, Plus, Search, BarChart2, MapPin, Linkedin, User as UserIcon, AlertTriangle, Activity, LogOut, Loader2 } from "lucide-react";
 import { LoginPage } from "./components/ui/animated-characters-login-page";
 import { ProfilePage } from "./components/ui/profile-page";
 import { LinkManagementTable } from "./components/ui/link-management-table";
@@ -196,18 +195,6 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col relative text-foreground bg-background overflow-hidden">
       <InfiniteGridBackground />
-      <DottedSurface className="size-full opacity-60 dark:opacity-30" />
-      
-      {/* Background Glow */}
-      <div
-        aria-hidden="true"
-        className={cn(
-          'pointer-events-none absolute top-0 left-1/2 size-full -translate-x-1/2 rounded-full',
-          'bg-[radial-gradient(ellipse_at_center,var(--color-primary)_0%,transparent_50%)]',
-          'opacity-[0.03] dark:opacity-[0.05]',
-          'blur-[100px]',
-        )}
-      />
 
       {/* Header */}
       <header className="relative z-10 pt-8 pb-4">
