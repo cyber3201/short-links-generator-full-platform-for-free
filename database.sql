@@ -10,7 +10,8 @@ CREATE TABLE public.urls (
     short_url TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     clicks INTEGER DEFAULT 0,
-    top_location TEXT DEFAULT 'Unknown' -- Could be expanded into a separate clicks tracking table
+    top_location TEXT DEFAULT 'Unknown', -- Could be expanded into a separate clicks tracking table
+    is_active BOOLEAN DEFAULT true
 );
 
 -- Index for fast lookup by short code
@@ -82,3 +83,42 @@ USING (bucket_id = 'avatars');
 CREATE POLICY "Anyone can upload an avatar."
 ON storage.objects FOR INSERT
 WITH CHECK (bucket_id = 'avatars' AND auth.role() = 'authenticated');
+
+-- 4. User Profiles Table (To store name, profession, and signup logs)
+CREATE TABLE public.profiles (
+    id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+    nom TEXT,
+    prenom TEXT,
+    profession TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own profile"
+ON public.profiles FOR SELECT
+USING (auth.uid() = id);
+
+CREATE POLICY "Users can update their own profile"
+ON public.profiles FOR UPDATE
+USING (auth.uid() = id);
+
+-- Function to handle new user signups and automatically insert profile data
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, nom, prenom, profession)
+  VALUES (
+    NEW.id,
+    NEW.raw_user_meta_data->>'nom',
+    NEW.raw_user_meta_data->>'prenom',
+    NEW.raw_user_meta_data->>'profession'
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to execute the function securely anytime a user signs up
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { User, Lock, Upload, Loader2, Save, X, ArrowLeft } from "lucide-react";
+import { User, Lock, Upload, Loader2, Save, X, ArrowLeft, Activity } from "lucide-react";
+import { LinkManagementTable } from "./link-management-table";
 import { supabase } from "../../lib/supabase";
 import { cn } from "../../lib/utils";
 
@@ -200,6 +201,17 @@ export function ProfilePage({ user, onBack }: { user: any; onBack: () => void })
               </button>
             </div>
           </form>
+
+          {/* Dashboard Table */}
+          <div className="mt-8 pt-8 border-t border-border/40">
+            <h3 className="text-xl font-bold tracking-tight flex items-center gap-2 mb-2">
+              <Activity className="w-6 h-6 text-primary" /> Link Management
+            </h3>
+            <p className="text-muted-foreground text-sm mb-6">Track your link performance and disable links as needed.</p>
+            <div className="-mx-4 sm:mx-0">
+              <LinkManagementTable userId={user.id} />
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Label } from "./label";
@@ -187,6 +187,11 @@ export function LoginPage({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  
+  // New auth states
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+
   const [mouseX, setMouseX] = useState<number>(0);
   const [mouseY, setMouseY] = useState<number>(0);
   const [isPurpleBlinking, setIsPurpleBlinking] = useState(false);
@@ -313,7 +318,14 @@ export function LoginPage({
     setIsLoading(true);
 
     try {
-      if (type === 'signup') {
+      if (isResettingPassword) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin
+        });
+        if (error) throw error;
+        alert("Password reset email sent! Please check your inbox.");
+        setIsResettingPassword(false);
+      } else if (type === 'signup') {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -322,12 +334,16 @@ export function LoginPage({
               nom,
               prenom,
               profession,
-            }
+            },
+            emailRedirectTo: window.location.origin
           }
         });
         if (error) throw error;
-        // Optionally, check data.user or data.session
-        if (onAuth && data.user) {
+        
+        // Wait for user to verify via email link
+        if (data.user && data.session === null) {
+          setAwaitingConfirmation(true);
+        } else if (onAuth && data.user) {
            onAuth(data.user.email || email);
         }
       } else {
@@ -541,16 +557,24 @@ export function LoginPage({
           {/* Header */}
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold tracking-tight mb-2">
-              {type === 'login' ? 'Welcome back!' : 'Create an account'}
+              {isResettingPassword 
+                ? 'Reset Password' 
+                : awaitingConfirmation 
+                  ? 'Verify your email' 
+                  : type === 'login' ? 'Welcome back!' : 'Create an account'}
             </h1>
             <p className="text-muted-foreground text-sm">
-              {type === 'login' ? 'Please enter your details to log in.' : 'Start shortening and tracking your links.'}
+              {isResettingPassword 
+                ? 'Enter your email to receive a password reset link.' 
+                : awaitingConfirmation 
+                  ? 'We sent a confirmation link to your email. Please click it to verify your account.'
+                  : type === 'login' ? 'Please enter your details to log in.' : 'Start shortening and tracking your links.'}
             </p>
           </div>
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {type === 'signup' && (
+            {!awaitingConfirmation && !isResettingPassword && type === 'signup' && (
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -602,22 +626,25 @@ export function LoginPage({
               </>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                autoComplete="off"
-                onChange={(e) => setEmail(e.target.value)}
-                onFocus={() => setIsTyping(true)}
-                onBlur={() => setIsTyping(false)}
-                required
-                className="h-12 bg-background border-border/60 focus:border-primary"
-              />
-            </div>
+            {awaitingConfirmation ? null : (
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  autoComplete="off"
+                  onChange={(e) => setEmail(e.target.value)}
+                  onFocus={() => setIsTyping(true)}
+                  onBlur={() => setIsTyping(false)}
+                  required
+                  className="h-12 bg-background border-border/60 focus:border-primary"
+                />
+              </div>
+            )}
 
+            {!awaitingConfirmation && !isResettingPassword && (
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium">Password</Label>
               <div className="relative">
@@ -643,8 +670,9 @@ export function LoginPage({
                 </button>
               </div>
             </div>
+            )}
 
-            {type === 'signup' && (
+            {!awaitingConfirmation && !isResettingPassword && type === 'signup' && (
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm Password</Label>
                 <div className="relative">
@@ -661,7 +689,7 @@ export function LoginPage({
               </div>
             )}
 
-            {type === 'login' && (
+            {!awaitingConfirmation && !isResettingPassword && type === 'login' && (
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <Checkbox id="remember" />
@@ -672,12 +700,13 @@ export function LoginPage({
                     Remember for 30 days
                   </Label>
                 </div>
-                <a
-                  href="#"
+                <button
+                  type="button"
+                  onClick={() => setIsResettingPassword(true)}
                   className="text-sm text-primary hover:underline font-medium"
                 >
                   Forgot password?
-                </a>
+                </button>
               </div>
             )}
 
@@ -687,25 +716,47 @@ export function LoginPage({
               </div>
             )}
 
-            <Button 
-              type="submit" 
-              className="w-full h-12 text-base font-medium" 
-              size="lg" 
-              disabled={isLoading}
-            >
-              {isLoading ? (type === 'login' ? "Signing in..." : "Signing up...") : (type === 'login' ? "Log in" : "Sign up")}
-            </Button>
+            {!awaitingConfirmation && (
+              <Button 
+                type="submit" 
+                className="w-full h-12 text-base font-medium" 
+                size="lg" 
+                disabled={isLoading}
+              >
+                {isLoading 
+                  ? (isResettingPassword ? "Sending..." : type === 'login' ? "Signing in..." : "Signing up...") 
+                  : (isResettingPassword ? "Send Reset Link" : type === 'login' ? "Log in" : "Sign up")}
+              </Button>
+            )}
           </form>
 
           {/* Sign Up Link */}
-          <div className="text-center text-sm text-muted-foreground mt-8">
-            {type === 'login' ? "Don't have an account? " : "Already have an account? "}
-            <button 
-              onClick={() => onNavigate?.(type === 'login' ? 'signup' : 'login')}
-              className="text-foreground font-medium hover:underline"
-            >
-              {type === 'login' ? 'Sign Up' : 'Log in'}
-            </button>
+          <div className="text-center text-sm text-muted-foreground mt-8 flex flex-col items-center gap-3">
+            {isResettingPassword ? (
+              <button 
+                onClick={() => { setIsResettingPassword(false); setError(""); }}
+                className="text-foreground font-medium hover:underline"
+              >
+                Back to log in
+              </button>
+            ) : awaitingConfirmation ? (
+              <button 
+                onClick={() => { setAwaitingConfirmation(false); setError(""); onNavigate?.('login'); }}
+                className="text-foreground font-medium hover:underline"
+              >
+                Proceed to login
+              </button>
+            ) : (
+              <div>
+                {type === 'login' ? "Don't have an account? " : "Already have an account? "}
+                <button 
+                  onClick={() => { onNavigate?.(type === 'login' ? 'signup' : 'login'); setError(""); }}
+                  className="text-foreground font-medium hover:underline ml-1"
+                >
+                  {type === 'login' ? 'Sign Up' : 'Log in'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

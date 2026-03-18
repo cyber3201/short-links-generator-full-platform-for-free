@@ -14,7 +14,7 @@ export default function RedirectHandler() {
       try {
         const { data, error: fetchError } = await supabase
           .from('urls')
-          .select('id, original_url, clicks')
+          .select('id, original_url, clicks, user_id, is_active')
           .eq('short_code', shortCode)
           .single();
 
@@ -24,15 +24,33 @@ export default function RedirectHandler() {
           return;
         }
 
-        // Optional: Increment the click count asynchronously
-        // Ideally handled securely via a Postgres Function/RPC or an Edge Function
-        supabase
-          .from('urls')
-          .update({ clicks: (data.clicks || 0) + 1 })
-          .eq('id', data.id)
-          .then(({ error: updateError }) => {
-             if (updateError) console.error("Failed to update clicks:", updateError);
-          });
+        if (data.is_active === false) {
+          setError("This link has been temporarily disabled by its owner.");
+          return;
+        }
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        const currentUser = sessionData.session?.user;
+
+        // Condition to restrict incrementing clicks for the owner
+        if (!currentUser || currentUser.id !== data.user_id) {
+          // Increment the click count asynchronously
+          supabase
+            .from('urls')
+            .update({ clicks: (data.clicks || 0) + 1 })
+            .eq('id', data.id)
+            .then(({ error: updateError }) => {
+               if (updateError) console.error("Failed to update clicks:", updateError);
+            });
+
+          // Insert into analytics table
+          supabase
+            .from('clicks')
+            .insert([{ url_id: data.id }])
+            .then(({ error: clickError }) => {
+               if (clickError) console.error("Failed to insert click record:", clickError);
+            });
+        }
 
         // Perform the redirect
         window.location.href = data.original_url;
