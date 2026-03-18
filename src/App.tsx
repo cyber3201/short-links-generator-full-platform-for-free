@@ -234,10 +234,10 @@ export default function App() {
             ) : (
               <>
                 <button onClick={() => setView('login')} className="text-sm font-medium hover:text-foreground transition-colors hidden sm:block">Log in</button>
-                <button onClick={() => setView('login')} className="bg-primary text-primary-foreground text-sm font-medium px-5 py-2 rounded-full hover:bg-primary/90 transition-colors shadow-sm sm:hidden">
+                <button onClick={() => setView('login')} className="bg-primary text-primary-foreground text-sm font-medium px-5 py-2 rounded-full border border-transparent hover:bg-background hover:text-primary hover:border-primary transition-all shadow-sm sm:hidden">
                   Log in
                 </button>
-                <button onClick={() => setView('signup')} className="hidden sm:block bg-primary text-primary-foreground text-sm font-medium px-5 py-2 rounded-full hover:bg-primary/90 transition-colors shadow-sm">
+                <button onClick={() => setView('signup')} className="hidden sm:block bg-primary text-primary-foreground text-sm font-medium px-5 py-2 rounded-full border border-transparent hover:bg-background hover:text-primary hover:border-primary transition-all shadow-sm">
                   Sign up
                 </button>
               </>
@@ -294,7 +294,7 @@ export default function App() {
                     <button
                       type="submit"
                       disabled={isShortening}
-                      className="h-16 px-8 bg-primary text-primary-foreground font-semibold rounded-2xl hover:bg-primary/90 transition-all flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-70 shadow-md"
+                      className="h-16 px-8 bg-primary text-primary-foreground font-semibold rounded-2xl border-2 border-transparent hover:bg-background hover:text-primary hover:border-primary transition-all flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-70 shadow-md"
                     >
                       {isShortening ? (
                         <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
@@ -318,7 +318,7 @@ export default function App() {
                           "shrink-0 flex items-center justify-center gap-2 border px-6 py-3 rounded-xl text-sm font-semibold transition-all w-full sm:w-auto",
                           copied 
                             ? "bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400" 
-                            : "bg-primary text-primary-foreground border-transparent hover:bg-primary/90"
+                            : "bg-primary text-primary-foreground border-transparent hover:border-primary hover:bg-background hover:text-primary"
                         )}
                       >
                         {copied ? (

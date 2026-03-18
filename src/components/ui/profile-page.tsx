@@ -163,7 +163,7 @@ export function ProfilePage({ user, onBack }: { user: any; onBack: () => void })
               <button
                 type="submit"
                 disabled={isSavingProfile}
-                className="bg-primary text-primary-foreground text-sm font-semibold px-6 py-2.5 rounded-xl hover:bg-primary/90 transition-all shadow-sm flex items-center gap-2 disabled:opacity-70"
+                className="bg-primary text-primary-foreground text-sm font-semibold px-6 py-2.5 rounded-xl border border-transparent hover:bg-background hover:text-primary hover:border-primary transition-all shadow-sm flex items-center gap-2 disabled:opacity-70"
               >
                 {isSavingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Save Changes
