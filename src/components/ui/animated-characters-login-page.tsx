@@ -183,7 +183,6 @@ export function LoginPage({
   const [password, setPassword] = useState("");
   const [nom, setNom] = useState("");
   const [prenom, setPrenom] = useState("");
-  const [profession, setProfession] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -306,10 +305,31 @@ export function LoginPage({
   const yellowPos = calculatePosition(yellowRef);
   const orangePos = calculatePosition(orangeRef);
 
+  const getEmailError = (val: string) => {
+    if (!val) return "";
+    if (!val.includes('@')) return "Email must contain an '@' symbol.";
+    return "";
+  };
+
+  const getPasswordError = (val: string) => {
+    if (!val) return "";
+    if (val.length < 8) return "Password must be at least 8 characters.";
+    if (!/\d/.test(val)) return "Password must contain at least 1 number.";
+    return "";
+  };
+
+  const emailErrorMsg = getEmailError(email);
+  const passwordErrorMsg = getPasswordError(password);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     
+    if (emailErrorMsg || passwordErrorMsg) {
+       setError("Please clear the validation errors before proceeding.");
+       return;
+    }
+
     if (type === 'signup' && password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -333,7 +353,6 @@ export function LoginPage({
             data: {
               nom,
               prenom,
-              profession,
             },
             emailRedirectTo: window.location.origin
           }
@@ -608,21 +627,6 @@ export function LoginPage({
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="profession" className="text-sm font-medium">Profession</Label>
-                  <Input
-                    id="profession"
-                    type="text"
-                    placeholder="Developer"
-                    value={profession}
-                    autoComplete="off"
-                    onChange={(e) => setProfession(e.target.value)}
-                    onFocus={() => setIsTyping(true)}
-                    onBlur={() => setIsTyping(false)}
-                    required
-                    className="h-12 bg-background border-border/60 focus:border-primary"
-                  />
-                </div>
               </>
             )}
 
@@ -639,8 +643,13 @@ export function LoginPage({
                   onFocus={() => setIsTyping(true)}
                   onBlur={() => setIsTyping(false)}
                   required
-                  className="h-12 bg-background border-border/60 focus:border-primary"
+                  className={cn(
+                    "h-12 bg-background border-border/60 focus:border-primary",
+                    emailErrorMsg ? "border-red-500/50 focus:border-red-500/50" : ""
+                  )}
                 />
+                {emailErrorMsg && <p className="text-xs text-red-500 font-medium ml-1">{emailErrorMsg}</p>}
+                {!emailErrorMsg && String(email).length > 0 && <p className="text-xs text-green-500 font-medium ml-1">Valid email format ✔</p>}
               </div>
             )}
 
@@ -655,7 +664,10 @@ export function LoginPage({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-12 pr-10 bg-background border-border/60 focus:border-primary"
+                  className={cn(
+                    "h-12 pr-10 bg-background border-border/60 focus:border-primary",
+                    passwordErrorMsg ? "border-red-500/50 focus:border-red-500/50" : ""
+                  )}
                 />
                 <button
                   type="button"
@@ -669,6 +681,8 @@ export function LoginPage({
                   )}
                 </button>
               </div>
+              {passwordErrorMsg && <p className="text-xs text-red-500 font-medium ml-1">Weak: {passwordErrorMsg}</p>}
+              {!passwordErrorMsg && String(password).length > 0 && <p className="text-xs text-green-500 font-medium ml-1">Strong password ✔</p>}
             </div>
             )}
 

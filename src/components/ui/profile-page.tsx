@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { User, Lock, Upload, Loader2, Save, X, ArrowLeft } from "lucide-react";
+import { User, Lock, Upload, Loader2, Save, X, ArrowLeft, Check, AlertCircle } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { cn } from "../../lib/utils";
 
@@ -52,10 +52,18 @@ export function ProfilePage({ user, onBack }: { user: any; onBack: () => void })
     e.preventDefault();
     setIsSavingProfile(true);
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { error: authError } = await supabase.auth.updateUser({
         data: { full_name: fullName, avatar_url: avatarUrl }
       });
-      if (error) throw error;
+      if (authError) throw authError;
+
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .update({ full_name: fullName, avatar_url: avatarUrl })
+        .eq('id', user.id);
+      
+      if (dbError) throw dbError;
+
       showMessage("Profile updated successfully!", "success");
     } catch (error: any) {
       showMessage(error.message || "Failed to update profile", "error");
@@ -84,7 +92,7 @@ export function ProfilePage({ user, onBack }: { user: any; onBack: () => void })
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 py-8 animate-in fade-in duration-300">
+    <div className="w-full h-full px-4 sm:px-8 py-8 animate-in fade-in duration-300">
       <button 
         onClick={onBack}
         className="mb-6 flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -92,15 +100,19 @@ export function ProfilePage({ user, onBack }: { user: any; onBack: () => void })
         <ArrowLeft className="w-4 h-4 mr-2" /> Back to Home
       </button>
 
-      <div className="bg-card/80 border border-border/50 shadow-2xl rounded-[2rem] p-6 sm:p-10 backdrop-blur-xl relative overflow-hidden">
-        {message.text && (
-          <div className={cn(
-            "absolute top-0 left-0 right-0 p-3 text-center text-sm font-semibold transition-all z-10",
-            message.type === "success" ? "bg-green-500/10 text-green-500 border-b border-green-500/20" : "bg-destructive/10 text-destructive border-b border-destructive/20"
-          )}>
-            {message.text}
-          </div>
-        )}
+      {message.text && (
+        <div className={cn(
+          "fixed top-4 right-4 sm:top-6 sm:right-6 p-4 rounded-xl shadow-xl text-sm font-semibold transition-all z-[100] animate-in slide-in-from-top-4 flex items-center gap-2",
+          message.type === "success" 
+            ? "bg-green-500/10 text-green-500 border border-green-500/20 backdrop-blur-md" 
+            : "bg-destructive/10 text-destructive border border-destructive/20 backdrop-blur-md"
+        )}>
+          {message.type === "success" ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          {message.text}
+        </div>
+      )}
+
+      <div className="w-full max-w-4xl pt-4 relative">
 
         <div className="mb-8 mt-2">
           <h2 className="text-3xl font-bold tracking-tight">Your Profile</h2>
