@@ -24,6 +24,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<'home' | 'login' | 'signup' | 'terms' | 'privacy' | 'profile'>('home');
   const [user, setUser] = useState<any>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
     // Get initial session
@@ -70,6 +71,11 @@ export default function App() {
     e.preventDefault();
     if (!url) return;
     
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
     setIsShortening(true);
     
     // Generate a short code locally (ideally we might ask a backend edge function)
@@ -209,7 +215,7 @@ export default function App() {
             <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
               <Scissors className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <span className="hidden sm:inline">mister-zack.link</span>
+            <span className="hidden sm:inline">THE NAJEM</span>
           </div>
           <div className="w-1/2 flex justify-end items-center gap-4">
             {user ? (
@@ -382,7 +388,7 @@ export default function App() {
             <h2 className="text-3xl font-bold mb-6">Terms of Use</h2>
             <div className="space-y-6 text-muted-foreground leading-relaxed">
               <p>
-                Welcome to mister-zack.link. By accessing or using our URL shortening service, you agree to be bound by these Terms of Use. If you disagree with any part of the terms, you may not access the service.
+                Welcome to THE NAJEM. By accessing or using our URL shortening service, you agree to be bound by these Terms of Use. If you disagree with any part of the terms, you may not access the service.
               </p>
               <h3 className="text-xl font-semibold text-foreground">1. Acceptable Use</h3>
               <p>
@@ -411,7 +417,7 @@ export default function App() {
             <h2 className="text-3xl font-bold mb-6">Privacy Policy</h2>
             <div className="space-y-6 text-muted-foreground leading-relaxed">
               <p>
-                Your privacy is important to us. It is mister-zack.link's policy to respect your privacy regarding any information we may collect from you across our website and other sites we own and operate.
+                Your privacy is important to us. It is THE NAJEM's policy to respect your privacy regarding any information we may collect from you across our website and other sites we own and operate.
               </p>
               <h3 className="text-xl font-semibold text-foreground">1. Information We Collect</h3>
               <p>
@@ -444,7 +450,7 @@ export default function App() {
               <div className="bg-primary text-primary-foreground p-1 rounded-md">
                 <Scissors className="w-4 h-4" />
               </div>
-              mister-zack.link
+              THE NAJEM
             </div>
             <div className="flex items-center gap-4 text-muted-foreground flex-wrap justify-center">
               <button onClick={() => setView('terms')} className="hover:text-foreground transition-colors text-[#ffffff] border border-[#dddde2] px-3 py-1 rounded-md text-sm font-medium">Terms of Use</button>
@@ -459,6 +465,45 @@ export default function App() {
             </div>
           </div>
         </footer>
+      )}
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-card w-full max-w-md rounded-3xl border border-border/50 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-border/50 flex items-center justify-between bg-muted/10">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-primary" /> 
+                Authentication Required
+              </h2>
+              <button 
+                onClick={() => setShowAuthModal(false)} 
+                className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 text-center space-y-6">
+              <p className="text-muted-foreground text-base leading-relaxed">
+                You need to be logged in to shorten links. Please create an account or log in to continue.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                <button
+                  onClick={() => { setShowAuthModal(false); setView('login'); }}
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-full border border-border hover:border-primary hover:bg-primary/5 hover:text-primary transition-all font-medium"
+                >
+                  Log In
+                </button>
+                <button
+                  onClick={() => { setShowAuthModal(false); setView('signup'); }}
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-all shadow-md"
+                >
+                  Sign Up
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* History Modal */}
