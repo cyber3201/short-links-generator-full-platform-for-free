@@ -6,7 +6,7 @@ import { LoginPage } from "./components/ui/animated-characters-login-page";
 import { ProfilePage } from "./components/ui/profile-page";
 import { LinkManagementTable } from "./components/ui/link-management-table";
 import { ThemeToggle } from "./components/ui/theme-toggle";
-import { GooeyText } from "./components/ui/gooey-text-morphing";
+import { InfiniteGridBackground } from "./components/ui/infinite-grid";
 import { ShinyButton } from "./components/ui/shiny-button";
 import { supabase, hasSupabaseKeys } from "./lib/supabase";
 
@@ -285,6 +285,8 @@ export default function App() {
         "flex-1 relative z-10 flex flex-col items-center justify-center px-4",
         view === 'dashboard' ? "py-8" : "py-8 md:py-20"
       )}>
+        <InfiniteGridBackground />
+
         {(view === 'login' || view === 'signup') && (
           <LoginPage 
             type={view} 
@@ -306,15 +308,12 @@ export default function App() {
         {view === 'home' && (
           <div className="max-w-4xl w-full text-center space-y-10 animate-in fade-in duration-300">
             <div className="space-y-6">
-              <div className="h-40 md:h-48 flex items-center justify-center font-extrabold tracking-tight leading-[1.1] w-full">
-                <GooeyText 
-                  texts={["Shorten Links.", "Expand Reach.", "Grow Faster."]} 
-                  morphTime={1.2} 
-                  cooldownTime={2.0} 
-                  className="w-full"
-                  textClassName="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60 dark:from-primary dark:to-primary/50 !pb-6 !leading-snug"
-                />
-              </div>
+              <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1]">
+                Shorten Your Links. <br className="hidden md:block" />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60 dark:from-primary dark:to-primary/50">
+                  Expand Your Reach.
+                </span>
+              </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                 A simple, fast, and secure URL shortener. Transform long, ugly links into clean, memorable ones in seconds.
               </p>
@@ -345,7 +344,7 @@ export default function App() {
                       {isShortening ? (
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-4" />
                       ) : (
-                        <>Shorten <ArrowRight className="w-4 h-4" /></>
+                        "Shorten"
                       )}
                     </ShinyButton>
                   </form>
