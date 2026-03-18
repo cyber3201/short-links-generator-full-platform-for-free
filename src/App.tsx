@@ -195,6 +195,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col relative text-foreground bg-background overflow-hidden">
+      <InfiniteGridBackground />
       <DottedSurface className="size-full opacity-60 dark:opacity-30" />
       
       {/* Background Glow */}
@@ -285,7 +286,6 @@ export default function App() {
         "flex-1 relative z-10 flex flex-col items-center justify-center px-4",
         view === 'dashboard' ? "py-8" : "py-8 md:py-20"
       )}>
-        <InfiniteGridBackground />
 
         {(view === 'login' || view === 'signup') && (
           <LoginPage 
