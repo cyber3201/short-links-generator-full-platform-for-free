@@ -1,9 +1,10 @@
 import { DottedSurface } from "./components/ui/dotted-surface";
 import { cn } from './lib/utils';
-import { Link, ArrowRight, Scissors, Copy, Check, Github, History, X, Plus, Search, BarChart2, MapPin, Linkedin, User as UserIcon, AlertTriangle } from "lucide-react";
+import { Link, ArrowRight, Scissors, Copy, Check, Github, History, X, Plus, Search, BarChart2, MapPin, Linkedin, User as UserIcon, AlertTriangle, Activity } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { LoginPage } from "./components/ui/animated-characters-login-page";
 import { ProfilePage } from "./components/ui/profile-page";
+import { LinkManagementTable } from "./components/ui/link-management-table";
 import { supabase, hasSupabaseKeys } from "./lib/supabase";
 
 type HistoryItem = {
@@ -22,7 +23,7 @@ export default function App() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [view, setView] = useState<'home' | 'login' | 'signup' | 'terms' | 'privacy' | 'profile'>('home');
+  const [view, setView] = useState<'home' | 'login' | 'signup' | 'terms' | 'privacy' | 'profile' | 'dashboard'>('home');
   const [user, setUser] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
@@ -152,11 +153,10 @@ export default function App() {
     setCopied(false);
   };
 
-  // Deprecated handling auth state purely locally via FormEvent, 
-  // we now use `onAuthStateChange` from Supabase listener above.
+  // Handle auth form success
   const handleAuth = async (email: string) => {
-      // Just set view home, user state is managed by the onAuthStateChange listener
-      setView('home');
+      // Redirect to dashboard on login/signup success
+      setView('dashboard');
   };
 
   const filteredHistory = history.filter(item => 
@@ -221,6 +221,13 @@ export default function App() {
             {user ? (
               <div className="flex items-center gap-3">
                 <button 
+                  onClick={() => setView('dashboard')}
+                  className="hidden sm:flex items-center gap-2 hover:bg-muted/50 px-3 py-1.5 rounded-full transition-colors border border-transparent hover:border-border text-sm font-medium"
+                >
+                  <BarChart2 className="w-4 h-4" /> Dashboard
+                </button>
+                <div className="hidden sm:block w-px h-4 bg-border"></div>
+                <button 
                   onClick={() => setView('profile')}
                   className="flex items-center gap-2 hover:bg-muted/50 p-1.5 rounded-full pl-2 transition-colors border border-transparent hover:border-border text-sm font-medium"
                 >
@@ -253,7 +260,10 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 relative z-10 flex flex-col items-center justify-center px-4 py-8 md:py-20">
+      <main className={cn(
+        "flex-1 relative z-10 flex flex-col items-center justify-center px-4",
+        view === 'dashboard' ? "py-8" : "py-8 md:py-20"
+      )}>
         {(view === 'login' || view === 'signup') && (
           <LoginPage 
             type={view} 
@@ -264,6 +274,12 @@ export default function App() {
 
         {view === 'profile' && user && (
           <ProfilePage user={user} onBack={() => setView('home')} />
+        )}
+
+        {view === 'dashboard' && user && (
+          <div className="w-full max-w-[1400px] animate-in fade-in duration-300">
+            <LinkManagementTable userId={user.id} />
+          </div>
         )}
 
         {view === 'home' && (
