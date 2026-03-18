@@ -6,6 +6,8 @@ import { LoginPage } from "./components/ui/animated-characters-login-page";
 import { ProfilePage } from "./components/ui/profile-page";
 import { LinkManagementTable } from "./components/ui/link-management-table";
 import { ThemeToggle } from "./components/ui/theme-toggle";
+import { GooeyText } from "./components/ui/gooey-text-morphing";
+import { ShinyButton } from "./components/ui/shiny-button";
 import { supabase, hasSupabaseKeys } from "./lib/supabase";
 
 type HistoryItem = {
@@ -304,12 +306,15 @@ export default function App() {
         {view === 'home' && (
           <div className="max-w-4xl w-full text-center space-y-10 animate-in fade-in duration-300">
             <div className="space-y-6">
-              <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1]">
-                Shorten Your Links. <br className="hidden md:block" />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60 dark:from-primary dark:to-primary/50">
-                  Expand Your Reach.
-                </span>
-              </h1>
+              <div className="h-40 md:h-48 flex items-center justify-center font-extrabold tracking-tight leading-[1.1] w-full">
+                <GooeyText 
+                  texts={["Shorten Links.", "Expand Reach.", "Grow Faster."]} 
+                  morphTime={1.2} 
+                  cooldownTime={2.0} 
+                  className="w-full"
+                  textClassName="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60 dark:from-primary dark:to-primary/50 !pb-6 !leading-snug"
+                />
+              </div>
               <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                 A simple, fast, and secure URL shortener. Transform long, ugly links into clean, memorable ones in seconds.
               </p>
@@ -332,17 +337,17 @@ export default function App() {
                         className="w-full h-16 pl-14 pr-4 rounded-2xl bg-background/50 border border-input/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all text-lg shadow-inner"
                       />
                     </div>
-                    <button
+                    <ShinyButton
                       type="submit"
                       disabled={isShortening}
-                      className="h-16 px-8 bg-primary text-primary-foreground font-semibold rounded-2xl border-2 border-transparent hover:bg-background hover:text-primary hover:border-primary transition-all flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-70 shadow-md"
+                      className="h-16 px-8 text-lg font-bold rounded-2xl flex items-center justify-center gap-2 whitespace-nowrap shadow-md focus:outline-none"
                     >
                       {isShortening ? (
-                        <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-4" />
                       ) : (
                         <>Shorten <ArrowRight className="w-4 h-4" /></>
                       )}
-                    </button>
+                    </ShinyButton>
                   </form>
                 ) : (
                   <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-300 p-2">
@@ -394,21 +399,21 @@ export default function App() {
             
             <div className="pt-16 grid grid-cols-1 md:grid-cols-3 gap-10 text-left max-w-5xl mx-auto">
               <div className="space-y-3 p-6 rounded-3xl hover:bg-muted/30 transition-colors border border-transparent hover:border-border/50">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-5">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-5">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                 </div>
                 <h3 className="font-semibold text-xl tracking-tight">Lightning Fast</h3>
                 <p className="text-muted-foreground leading-relaxed">Generate short links instantly with our globally distributed edge infrastructure.</p>
               </div>
               <div className="space-y-3 p-6 rounded-3xl hover:bg-muted/30 transition-colors border border-transparent hover:border-border/50">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-5">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-5">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 </div>
                 <h3 className="font-semibold text-xl tracking-tight">Secure & Reliable</h3>
                 <p className="text-muted-foreground leading-relaxed">Every link is encrypted and scanned for malware to protect you and your users.</p>
               </div>
               <div className="space-y-3 p-6 rounded-3xl hover:bg-muted/30 transition-colors border border-transparent hover:border-border/50">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-5">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-5">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                 </div>
                 <h3 className="font-semibold text-xl tracking-tight">Detailed Analytics</h3>
@@ -488,13 +493,13 @@ export default function App() {
               THE NAJEM
             </div>
             <div className="flex items-center gap-4 text-muted-foreground flex-wrap justify-center">
-              <button onClick={() => setView('terms')} className="hover:text-foreground transition-colors text-[#ffffff] border border-[#dddde2] px-3 py-1 rounded-md text-sm font-medium">Terms of Use</button>
-              <button onClick={() => setView('privacy')} className="hover:text-foreground transition-colors text-[#f5f5f5] text-sm font-medium">Privacy Policy</button>
+              <button onClick={() => setView('terms')} className="hover:text-foreground transition-colors text-muted-foreground border border-border px-3 py-1 rounded-md text-sm font-medium">Terms of Use</button>
+              <button onClick={() => setView('privacy')} className="hover:text-foreground transition-colors text-muted-foreground text-sm font-medium">Privacy Policy</button>
               <div className="hidden md:block w-px h-4 bg-border mx-2"></div>
-              <a href="#" className="hover:text-foreground transition-colors">
+              <a href="https://github.com/cyber3201" target="_blank" rel="noreferrer" className="hover:text-foreground transition-colors">
                 <Github className="w-5 h-5" />
               </a>
-              <a href="#" className="hover:text-foreground transition-colors">
+              <a href="https://www.linkedin.com/in/zakaryagbibar/" target="_blank" rel="noreferrer" className="hover:text-foreground transition-colors">
                 <Linkedin className="w-5 h-5" />
               </a>
             </div>

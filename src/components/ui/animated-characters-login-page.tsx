@@ -649,7 +649,7 @@ export function LoginPage({
                   )}
                 />
                 {emailErrorMsg && <p className="text-xs text-red-500 font-medium ml-1">{emailErrorMsg}</p>}
-                {!emailErrorMsg && String(email).length > 0 && <p className="text-xs text-green-500 font-medium ml-1">Valid email format ✔</p>}
+                {!emailErrorMsg && String(email).length > 0 && <p className="text-xs text-green-500 font-medium ml-1">Valid email format</p>}
               </div>
             )}
 
@@ -682,7 +682,7 @@ export function LoginPage({
                 </button>
               </div>
               {passwordErrorMsg && <p className="text-xs text-red-500 font-medium ml-1">Weak: {passwordErrorMsg}</p>}
-              {!passwordErrorMsg && String(password).length > 0 && <p className="text-xs text-green-500 font-medium ml-1">Strong password ✔</p>}
+              {!passwordErrorMsg && String(password).length > 0 && <p className="text-xs text-green-500 font-medium ml-1">Strong password</p>}
             </div>
             )}
 
