@@ -5,7 +5,7 @@ import { Button } from "./button";
 import { Input } from "./input";
 import { Label } from "./label";
 import { Checkbox } from "./checkbox";
-import { Eye, EyeOff, Mail, Sparkles, X } from "lucide-react";
+import { Eye, EyeOff, Mail, Sparkles, X, ArrowLeft } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { supabase } from "../../lib/supabase";
 
@@ -552,17 +552,6 @@ export function LoginPage({
           </div>
         </div>
 
-        <div className="relative z-20 hidden md:flex items-center gap-8 text-sm text-primary-foreground/60">
-          <a href="#" className="hover:text-primary-foreground transition-colors">
-            Privacy Policy
-          </a>
-          <a href="#" className="hover:text-primary-foreground transition-colors">
-            Terms of Service
-          </a>
-          <a href="#" className="hover:text-primary-foreground transition-colors">
-            Contact
-          </a>
-        </div>
 
         {/* Decorative elements */}
         <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]" />
@@ -570,11 +559,19 @@ export function LoginPage({
         <div className="absolute bottom-1/4 left-1/4 size-96 bg-primary-foreground/5 rounded-full blur-3xl" />
       </div>
 
-      {/* Right Login Section */}
       <div className="flex justify-center p-6 md:p-12 bg-background relative h-full overflow-y-auto">
-        <div className="w-full max-w-[420px] my-auto py-8 md:py-12">
+        <div className="w-full max-w-[420px] my-auto py-8 md:py-12 relative">
+          
+          <button 
+            type="button"
+            onClick={(e) => { e.preventDefault(); onNavigate?.('home'); }}
+            className="absolute top-2 left-0 md:-ml-4 -mt-6 p-2 text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 text-sm font-medium rounded-lg hover:bg-muted/50"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Home
+          </button>
+
           {/* Header */}
-          <div className="text-center mb-10">
+          <div className="text-center mb-10 mt-6">
             <h1 className="text-3xl font-bold tracking-tight mb-2">
               {isResettingPassword 
                 ? 'Reset Password' 
@@ -681,8 +678,8 @@ export function LoginPage({
                   )}
                 </button>
               </div>
-              {passwordErrorMsg && <p className="text-xs text-red-500 font-medium ml-1">Weak: {passwordErrorMsg}</p>}
-              {!passwordErrorMsg && String(password).length > 0 && <p className="text-xs text-green-500 font-medium ml-1">Strong password</p>}
+              {type === 'signup' && passwordErrorMsg && <p className="text-xs text-red-500 font-medium ml-1">Weak: {passwordErrorMsg}</p>}
+              {type === 'signup' && !passwordErrorMsg && String(password).length > 0 && <p className="text-xs text-green-500 font-medium ml-1">Strong password</p>}
             </div>
             )}
 
