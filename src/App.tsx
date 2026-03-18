@@ -1,6 +1,6 @@
 import { DottedSurface } from "./components/ui/dotted-surface";
 import { cn } from './lib/utils';
-import { Link, ArrowRight, Scissors, Copy, Check, Github, History, X, Plus, Search, BarChart2, MapPin, Linkedin, User as UserIcon, AlertTriangle, Activity } from "lucide-react";
+import { Link, ArrowRight, Scissors, Copy, Check, Github, History, X, Plus, Search, BarChart2, MapPin, Linkedin, User as UserIcon, AlertTriangle, Activity, LogOut } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { LoginPage } from "./components/ui/animated-characters-login-page";
 import { ProfilePage } from "./components/ui/profile-page";
@@ -217,19 +217,28 @@ export default function App() {
             </div>
             <span className="hidden sm:inline">THE NAJEM</span>
           </div>
-          <div className="w-1/2 flex justify-end items-center gap-4">
+          <div className="flex justify-end items-center gap-2 sm:gap-4">
             {user ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button 
                   onClick={() => setView('dashboard')}
-                  className="hidden sm:flex items-center gap-2 hover:bg-muted/50 px-3 py-1.5 rounded-full transition-colors border border-transparent hover:border-border text-sm font-medium"
+                  className={cn(
+                    "flex items-center gap-2 hover:bg-muted/50 px-2 sm:px-3 py-1.5 rounded-full transition-colors border border-transparent hover:border-border text-sm font-medium",
+                    view === 'dashboard' ? "bg-muted text-primary" : ""
+                  )}
+                  title="Dashboard"
                 >
-                  <BarChart2 className="w-4 h-4" /> Dashboard
+                  <BarChart2 className="w-5 h-5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Dashboard</span>
                 </button>
                 <div className="hidden sm:block w-px h-4 bg-border"></div>
                 <button 
                   onClick={() => setView('profile')}
-                  className="flex items-center gap-2 hover:bg-muted/50 p-1.5 rounded-full pl-2 transition-colors border border-transparent hover:border-border text-sm font-medium"
+                  className={cn(
+                    "flex items-center gap-2 hover:bg-muted/50 p-1 sm:p-1.5 rounded-full sm:pl-2 transition-colors border border-transparent hover:border-border text-sm font-medium",
+                    view === 'profile' ? "bg-muted text-primary" : ""
+                  )}
+                  title="Profile"
                 >
                   <span className="hidden sm:inline-block truncate max-w-[120px]">
                     {user.user_metadata?.full_name || user.email.split('@')[0]}
@@ -238,11 +247,18 @@ export default function App() {
                     <img src={user.user_metadata.avatar_url} alt="Profile" className="w-8 h-8 rounded-full object-cover border border-border" />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-border">
-                      <UserIcon className="w-4 h-4" />
+                      <UserIcon className="w-4 h-4 sm:w-4 sm:h-4" />
                     </div>
                   )}
                 </button>
-                <button onClick={() => { supabase.auth.signOut(); setView('home'); }} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors ml-2">Log out</button>
+                <button 
+                  onClick={() => { supabase.auth.signOut(); setView('home'); }} 
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors ml-1 sm:ml-2 flex flex-col items-center justify-center p-1.5 rounded-full hover:bg-muted/50 border border-transparent hover:border-border"
+                  title="Log out"
+                >
+                  <span className="hidden sm:inline">Log out</span>
+                  <LogOut className="w-5 h-5 sm:hidden" />
+                </button>
               </div>
             ) : (
               <>
