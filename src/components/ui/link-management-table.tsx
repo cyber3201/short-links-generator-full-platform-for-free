@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Power, Play, Link, Calendar, Globe, MousePointerClick, Activity } from "lucide-react";
+import { X, Power, Play, Link, Calendar, Globe, MousePointerClick, Activity, Copy } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 export interface ShortLink {
@@ -81,6 +81,31 @@ export function LinkManagementTable({
 
   const closeLinkModal = () => {
     setSelectedLink(null);
+  };
+
+  const handleCopy = async (e: React.MouseEvent, textToCopy: string) => {
+    e.stopPropagation();
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = textToCopy;
+        textArea.style.position = "absolute";
+        textArea.style.left = "-999999px";
+        document.body.prepend(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+        } catch (error) {
+          console.error("Fallback copy failed", error);
+        } finally {
+          textArea.remove();
+        }
+      }
+    } catch (err) {
+      console.error("Failed to copy text: ", err);
+    }
   };
 
   const getCPUBars = (clicks: number, is_active: boolean) => {
@@ -212,19 +237,33 @@ export function LinkManagementTable({
                       <span className="text-xl font-bold text-muted-foreground/50">{link.number}</span>
                     </div>
 
-                    <div className="col-span-3 flex items-center gap-3 pr-4 overflow-hidden">
+                    <div className="col-span-3 flex items-center gap-2 pr-4 overflow-hidden">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
                         <Link className="w-4 h-4 text-primary" />
                       </div>
                       <span className="text-foreground font-medium truncate" title={link.original_url}>
                         {link.original_url}
                       </span>
+                      <button 
+                        onClick={(e) => handleCopy(e, link.original_url)}
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors shrink-0"
+                        title="Copy original link"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
                     </div>
 
-                    <div className="col-span-2">
-                      <span className="text-primary font-mono text-sm bg-primary/5 px-2.5 py-1 rounded-md border border-primary/10">
+                    <div className="col-span-2 flex items-center gap-2">
+                      <span className="text-primary font-mono text-sm bg-primary/5 px-2.5 py-1 rounded-md border border-primary/10 truncate">
                         /{link.short_code}
                       </span>
+                      <button 
+                        onClick={(e) => handleCopy(e, link.short_url)}
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors shrink-0"
+                        title="Copy short link"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
                     </div>
 
                     <div className="col-span-2 flex items-center gap-2 text-sm text-foreground">
@@ -248,9 +287,18 @@ export function LinkManagementTable({
                   {/* Mobile Layout */}
                   <div className="sm:hidden relative flex flex-col gap-4">
                     <div className="flex justify-between items-center w-full">
-                      <span className="text-primary font-mono text-xs font-semibold tracking-wider bg-primary/5 px-2.5 py-1 rounded-md border border-primary/10">
-                        /{link.short_code}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-primary font-mono text-xs font-semibold tracking-wider bg-primary/5 px-2.5 py-1 rounded-md border border-primary/10">
+                          /{link.short_code}
+                        </span>
+                        <button 
+                          onClick={(e) => handleCopy(e, link.short_url)}
+                          className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors"
+                          title="Copy short link"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                       {getStatusBadge(link.is_active)}
                     </div>
                     
@@ -261,6 +309,13 @@ export function LinkManagementTable({
                       <span className="text-foreground font-semibold text-lg truncate w-full" title={link.original_url}>
                         {link.original_url}
                       </span>
+                      <button 
+                        onClick={(e) => handleCopy(e, link.original_url)}
+                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors shrink-0"
+                        title="Copy original link"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
                     </div>
 
                     <div className="flex items-center gap-6 text-sm text-muted-foreground font-medium bg-muted/30 p-3 rounded-lg border border-border/30">
@@ -299,13 +354,29 @@ export function LinkManagementTable({
                     <Activity className="w-6 h-6 text-primary" />
                   </div>
                   <div className="overflow-hidden">
-                    <h3 className="text-lg font-bold text-foreground truncate mt-1 w-full max-w-[250px] sm:max-w-md" title={selectedLink.original_url}>
-                      {selectedLink.original_url}
-                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <h3 className="text-lg font-bold text-foreground truncate w-full max-w-[200px] sm:max-w-[400px]" title={selectedLink.original_url}>
+                        {selectedLink.original_url}
+                      </h3>
+                      <button 
+                        onClick={(e) => handleCopy(e, selectedLink.original_url)}
+                        className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors shrink-0"
+                        title="Copy original link"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-primary font-mono text-xs font-semibold tracking-wider">
                         {selectedLink.short_url}
                       </span>
+                      <button 
+                        onClick={(e) => handleCopy(e, selectedLink.short_url)}
+                        className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors shrink-0"
+                        title="Copy short link"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>
