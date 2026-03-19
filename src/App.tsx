@@ -36,19 +36,17 @@ export default function App() {
   const [selectedLinkId, setSelectedLinkId] = useState<string | null>(null);
   const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
 
-  // Auto-scroll to top when view changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [view]);
 
   useEffect(() => {
-    // Get initial session
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) fetchHistory(session.user.id);
     });
 
-    // Listen for auth changes (login/logout/signup)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setPasswordRecoveryMode(true);
@@ -74,7 +72,7 @@ export default function App() {
     if (error) {
       console.error('Error fetching history:', error);
     } else if (data) {
-      // Map database columns to component's expected HistoryItem structure
+
       setHistory(data.map(item => ({
         id: item.id,
         originalUrl: item.original_url,
@@ -95,14 +93,12 @@ export default function App() {
     }
 
     setIsShortening(true);
-    
-    // Generate a short code locally (ideally we might ask a backend edge function)
+
     const shortCode = Math.random().toString(36).substring(2, 8);
-    // Match the current domain (e.g. Netlify) so links resolve automatically
+
     const baseUrl = window.location.origin;
     const newShortUrl = `${baseUrl}/${shortCode}`;
 
-    // If user is logged in, attach their ID, otherwise it's null (anonymous)
     const { data: rpcData, error } = await supabase.rpc('create_short_url_secure', {
       p_original_url: url,
       p_short_code: shortCode,
@@ -134,7 +130,7 @@ export default function App() {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(textToCopy);
       } else {
-        // Fallback for when clipboard API is not available or blocked
+
         const textArea = document.createElement("textarea");
         textArea.value = textToCopy;
         textArea.style.position = "absolute";
@@ -168,9 +164,8 @@ export default function App() {
     setLinkPassword("");
   };
 
-  // Handle auth form success
   const handleAuth = async (email: string) => {
-      // Redirect to dashboard on login/signup success
+
       setView('dashboard');
   };
 
@@ -209,7 +204,6 @@ export default function App() {
     <div className="min-h-screen flex flex-col relative text-foreground bg-background overflow-hidden">
       <InfiniteGridBackground />
 
-      {/* Header */}
       <header className="relative z-10 pt-8 pb-4">
         <div className="container mx-auto px-4 flex flex-row items-center justify-between relative gap-4 sm:gap-0">
           <div 
@@ -278,7 +272,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className={cn(
         "flex-1 relative z-10 flex flex-col items-center justify-center px-4",
         view === 'dashboard' ? "py-8" : "py-8 md:py-20"
@@ -483,7 +476,7 @@ export default function App() {
             </div>
             
             <div className="pt-16 grid grid-cols-1 md:grid-cols-3 gap-10 text-left max-w-6xl mx-auto">
-              {/* Lightning Fast Card */}
+              
               <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-border p-2 md:rounded-[1.5rem] md:p-3 list-none">
                 <GlowingEffect
                   spread={40}
@@ -504,7 +497,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Secure & Reliable Card */}
               <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-border p-2 md:rounded-[1.5rem] md:p-3 list-none">
                 <GlowingEffect
                   spread={40}
@@ -525,7 +517,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Detailed Analytics Card */}
               <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-border p-2 md:rounded-[1.5rem] md:p-3 list-none">
                 <GlowingEffect
                   spread={40}
@@ -610,7 +601,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer */}
       {view !== 'login' && view !== 'signup' && (
         <footer className="relative z-10 border-t border-border/40 bg-background/60 backdrop-blur-xl py-10">
           <div className="container mx-auto max-w-6xl px-4 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -632,7 +622,6 @@ export default function App() {
         </footer>
       )}
 
-      {/* Auth Modal */}
       {showAuthModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-card w-full max-w-md rounded-3xl border border-border/50 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
@@ -671,7 +660,6 @@ export default function App() {
         </div>
       )}
 
-      {/* History Modal */}
       {showHistory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-card w-full max-w-lg rounded-3xl border border-border/50 shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in zoom-in-95 duration-200">

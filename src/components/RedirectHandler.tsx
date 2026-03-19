@@ -14,12 +14,12 @@ export default function RedirectHandler() {
   useEffect(() => {
     const fetchOriginalUrl = async () => {
       if (!shortCode) return;
-      // Prevent double-firing in React 18 StrictMode (dev only)
+
       if (hasProcessed.current) return;
       hasProcessed.current = true;
 
       try {
-        // First check if it exists and requires a password without leaking the original URL over the network
+
         const { data: initialData, error: initialError } = await supabase
           .from('urls')
           .select('id, is_active, is_password_protected')
@@ -41,7 +41,6 @@ export default function RedirectHandler() {
           return;
         }
 
-        // If not protected, proceed seamlessly by fetching the actual URL
         const { data: urlData, error: urlError } = await supabase
           .from('urls')
           .select('original_url')
@@ -73,12 +72,10 @@ export default function RedirectHandler() {
           }
       }
 
-      // Try to get geolocation data for analytics (using CORS-friendly APIs)
       let geoCountry: string | null = null;
       let geoCity: string | null = null;
       let geoIp: string | null = null;
-      
-      // API 1: geojs.io — fully CORS-supported, no key needed
+
       try {
         const geoResponse = await fetch('https://get.geojs.io/v1/ip/geo.json', { signal: AbortSignal.timeout(4000) });
         if (geoResponse.ok) {
@@ -91,7 +88,6 @@ export default function RedirectHandler() {
         console.warn('[GeoJS] Failed:', err);
       }
 
-      // API 2: Fallback to ipwho.is if primary returned nothing
       if (!geoCountry) {
         try {
           const fallback = await fetch('https://ipwho.is/', { signal: AbortSignal.timeout(4000) });
@@ -108,7 +104,6 @@ export default function RedirectHandler() {
         }
       }
 
-      // Await both DB operations to ensure they complete before the page navigates away
       await Promise.all([
         supabase
           .from('urls')
@@ -140,7 +135,7 @@ export default function RedirectHandler() {
       setError(null);
 
       try {
-          // Send to Edge RPC to verify the password against the secure hash
+
           const { data: rpcResult, error: rpcError } = await supabase.rpc('verify_and_get_url', {
              p_short_code: shortCode,
              p_password: passwordInput
@@ -158,7 +153,6 @@ export default function RedirectHandler() {
              return;
           }
 
-          // Verified successfully!
           await processAndRedirect(rpcResult.id, rpcResult.url, rpcResult.clicks);
       } catch (e) {
           setError("Unexpected verification error.");
@@ -169,7 +163,7 @@ export default function RedirectHandler() {
   if (needsPassword) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4 relative overflow-hidden">
-        {/* Subtle animated background grid for style */}
+        
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
         
         <form onSubmit={handlePasswordSubmit} className="bg-card/90 border border-border/50 shadow-2xl rounded-3xl p-8 max-w-md w-full text-center backdrop-blur-xl z-10 animate-in fade-in zoom-in-95 duration-300">
@@ -220,7 +214,6 @@ export default function RedirectHandler() {
     );
   }
 
-  // If there's an error, show it. Otherwise, show a loading spinner.
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4">

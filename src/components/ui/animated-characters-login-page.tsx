@@ -186,8 +186,7 @@ export function LoginPage({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
-  // New auth states
+
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", "", "", ""]);
@@ -323,7 +322,6 @@ export function LoginPage({
     newOtp[index] = value;
     setOtp(newOtp);
 
-    // Auto-advance
     if (value !== "" && index < 7) {
       otpRefs.current[index + 1]?.focus();
     }
@@ -419,8 +417,7 @@ export function LoginPage({
           }
         });
         if (error) throw error;
-        
-        // Wait for user to verify via email link
+
         if (data.user && data.session === null) {
           setAwaitingConfirmation(true);
         } else if (onAuth && data.user) {
@@ -445,12 +442,12 @@ export function LoginPage({
 
   return (
     <div className="w-full max-w-6xl mx-auto bg-card/80 backdrop-blur-xl rounded-[2rem] border border-border/50 shadow-2xl overflow-hidden grid lg:grid-cols-2 animate-in fade-in zoom-in-95 duration-300">
-      {/* Left Content Section */}
+      
       <div className="relative flex flex-col justify-between bg-gradient-to-br from-primary/90 via-primary to-primary/80 p-8 md:p-12 text-primary-foreground overflow-hidden">
         <div className="relative z-20 flex items-end justify-center h-[280px] md:h-[500px] w-full">
-          {/* Cartoon Characters */}
+          
           <div className="relative transform scale-[0.55] md:scale-100 origin-bottom" style={{ width: '550px', height: '400px' }}>
-            {/* Purple tall rectangle character - Back layer */}
+            
             <div 
               ref={purpleRef}
               className="absolute bottom-0 transition-all duration-700 ease-in-out"
@@ -499,7 +496,6 @@ export function LoginPage({
               </div>
             </div>
 
-            {/* Black tall rectangle character - Middle layer */}
             <div 
               ref={blackRef}
               className="absolute bottom-0 transition-all duration-700 ease-in-out"
@@ -550,7 +546,6 @@ export function LoginPage({
               </div>
             </div>
 
-            {/* Orange semi-circle character - Front left */}
             <div 
               ref={orangeRef}
               className="absolute bottom-0 transition-all duration-700 ease-in-out"
@@ -577,7 +572,6 @@ export function LoginPage({
               </div>
             </div>
 
-            {/* Yellow tall rectangle character - Front right */}
             <div 
               ref={yellowRef}
               className="absolute bottom-0 transition-all duration-700 ease-in-out"
@@ -613,8 +607,6 @@ export function LoginPage({
           </div>
         </div>
 
-
-        {/* Decorative elements */}
         <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]" />
         <div className="absolute top-1/4 right-1/4 size-64 bg-primary-foreground/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-1/4 size-96 bg-primary-foreground/5 rounded-full blur-3xl" />
@@ -631,7 +623,6 @@ export function LoginPage({
             <ArrowLeft className="w-4 h-4" /> Back to Home
           </button>
 
-          {/* Header */}
           <div className="text-center mb-10 mt-6">
             <h1 className="text-3xl font-bold tracking-tight mb-2">
               {isResettingPassword 
@@ -649,7 +640,6 @@ export function LoginPage({
             </p>
           </div>
 
-          {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {!awaitingConfirmation && !isResettingPassword && type === 'signup' && (
               <>
@@ -865,7 +855,6 @@ export function LoginPage({
             )}
           </form>
 
-          {/* Sign Up Link */}
           <div className="text-center text-sm text-muted-foreground mt-8 flex flex-col items-center gap-3">
             {isResettingPassword ? (
               <button 

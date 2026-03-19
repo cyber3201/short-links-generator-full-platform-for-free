@@ -112,7 +112,6 @@ export function LinkDetailPage({ linkId, onBack }: LinkDetailPageProps) {
           user_agent: d.user_agent
         })));
 
-        // Hourly chart (last 24h)
         const now = new Date();
         const hourlyMap: Record<string, number> = {};
         for (let i = 23; i >= 0; i--) {
@@ -130,7 +129,6 @@ export function LinkDetailPage({ linkId, onBack }: LinkDetailPageProps) {
         });
         setHourlyData(Object.entries(hourlyMap).map(([hour, clicks]) => ({ hour, clicks })));
 
-        // Location stats
         const aggregated: Record<string, { country: string; city: string; count: number }> = {};
         data.forEach(click => {
           const country = click.country || 'Unknown';
@@ -196,7 +194,6 @@ export function LinkDetailPage({ linkId, onBack }: LinkDetailPageProps) {
     <div className="w-full px-4 sm:px-8 py-6 animate-in fade-in duration-300">
       <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* Header Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button
@@ -268,7 +265,6 @@ export function LinkDetailPage({ linkId, onBack }: LinkDetailPageProps) {
           </div>
         </div>
 
-        {/* Stats Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-card rounded-2xl p-5 border border-border/40 shadow-sm flex flex-col justify-center">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
@@ -304,7 +300,6 @@ export function LinkDetailPage({ linkId, onBack }: LinkDetailPageProps) {
           </div>
         </div>
 
-        {/* Hourly Area Chart */}
         <div className="bg-card rounded-2xl p-5 border border-border/40 shadow-sm">
           <label className="text-sm font-bold text-foreground flex items-center gap-2 mb-4">
             <Activity className="w-4 h-4 text-primary" /> Clicks Over Time (Last 24h)
@@ -368,7 +363,7 @@ export function LinkDetailPage({ linkId, onBack }: LinkDetailPageProps) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Location Breakdown */}
+          
           <div className="bg-card rounded-2xl p-5 border border-border/40 shadow-sm">
             <label className="text-sm font-bold text-foreground flex items-center gap-2 mb-4">
               <MapPin className="w-4 h-4 text-primary" /> Location Breakdown
@@ -410,7 +405,6 @@ export function LinkDetailPage({ linkId, onBack }: LinkDetailPageProps) {
             )}
           </div>
 
-          {/* Performance */}
           <div className="bg-card rounded-2xl p-5 border border-border/40 shadow-sm">
             <label className="text-sm font-bold text-foreground flex items-center gap-2 mb-4">
               <Activity className="w-4 h-4 text-primary" /> Link Info
@@ -448,7 +442,6 @@ export function LinkDetailPage({ linkId, onBack }: LinkDetailPageProps) {
           </div>
         </div>
 
-        {/* Click Activity Log */}
         <div className="bg-card rounded-2xl p-5 border border-border/40 shadow-sm">
           <label className="text-sm font-bold text-foreground flex items-center gap-2 mb-4">
             <Clock className="w-4 h-4 text-primary" /> Click Activity Log
