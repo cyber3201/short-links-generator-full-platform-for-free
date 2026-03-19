@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="https://i.ibb.co/rGZzYLJV/9-SIR-LOGO.png" alt="9-SIR Logo" height="150" />
+  <img src="https://i.ibb.co/rGZzYLJV/9-SIR-LOGO.png" alt="9SIR Logo" height="150" />
 </div>
 
-<h1 align="center">9-SIR Premium URL Shortener</h1>
+<h1 align="center">9SIR Premium URL Shortener</h1>
 
 <p align="center">
   <strong>A modern, secure, and beautiful URL shortener tailored for businesses, marketing agencies, and professionals.</strong>
