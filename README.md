@@ -22,6 +22,10 @@ It enables you to create short links, lock them behind passwords, and beautifull
 - **OTP Email Authentication:** Secure email verification (no more forgotten passwords, just one-time passcodes).
 - **Password-Protected Links:** Lock any link behind a custom password.
 - **Deep Analytics Dashboard:** Track clicks over time (24h graphs), IP addresses, Geo-Locations (Top Country/City), and exact Device models (iOS, Android, Windows, Mac).
+- **Comprehensive Profile Management:** Users can customize their Full Name and securely upload/update their own profile avatars.
+- **Advanced Account Security:** Features strict "Old Password" verification to update credentials, plus a built-in forgotten password recovery flow.
+- **Data Export & Portability:** Instantly generate and download a comprehensive `.json` backup of all shortened links and click events.
+- **Secure Account Deletion:** A fully complete Account Deletion mechanism that scrubs all user data from the database securely via RPC.
 - **Dark-Mode Native UI:** A gorgeous, Glassmorphism-inspired UI with Framer Motion animations.
 - **Role-Based Security:** Fully secured using Supabase Row Level Security (RLS). You own your data, and nobody else can edit it.
 

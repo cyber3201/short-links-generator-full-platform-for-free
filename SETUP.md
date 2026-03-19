@@ -27,8 +27,9 @@ This project uses [Supabase](https://supabase.com) as its backend database and a
 1. **Create a Project:** Go to Supabase and create a new project.
 2. **Run SQL Migrations:** 
    - Go to the **SQL Editor** in your Supabase dashboard.
-   - Copy the contents of `database.sql` and run it. This creates the `urls` and `clicks` tables, along with some essential functions.
-   - Next, copy the contents of `security_updates.sql` and run it. This hardens the Row Level Security (RLS) to ensure unauthorized users cannot edit your database.
+   - Run `database.sql`. This creates the `urls` and `clicks` tables, along with some essential functions.
+   - Run `security_updates.sql`. This hardens the Row Level Security (RLS) to ensure unauthorized users cannot edit your database.
+   - **Crucially:** Run `setup_storage_and_profiles.sql`. This enables Profile Image uploads, configures the Full Name feature for signups, and adds the Account Deletion logic.
 3. **Configure Authentication (OTP):**
    - Go to **Authentication > Providers** and ensure Email is enabled.
    - Enable **Confirm Email** and **Secure Email Change**.

@@ -42,3 +42,9 @@ How does `yourdomain.com/Xy9K1z` become a redirection?
 PostgreSQL features **Row Level Security (RLS)** which acts as a bouncer at the database level.
 - Even if a malicious user inspects the network tab and finds the Supabase Anon Key, they **cannot** delete or modify another user's links. The database physically rejects queries where `auth.uid() != user_id`.
 - The `security_updates.sql` script ensures that an unauthenticated user can *only* trigger `INSERT` statements into the `clicks` table and *never* alter a URL's destination.
+
+## 6. Profile & Data Management
+
+- **Account Security:** Updating a password requires cryptographic verification of the current password via `signInWithPassword(email, oldPassword)` before completing the update.
+- **Export Data:** The client-side application securely joins data from the `urls` and `clicks` tables matching the authenticated user's ID, packages it into a portable JSON blob, and triggers a localized browser download.
+- **Account Deletion:** Users can permanently delete their accounts using a secure Postgres RPC (`delete_user_account()`). Because `auth.users` manages all primary keys, this cascades and instantly drops all associated links and analytics logs tied to that user.
