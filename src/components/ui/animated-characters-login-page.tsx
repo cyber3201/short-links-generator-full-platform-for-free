@@ -181,8 +181,7 @@ export function LoginPage({
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [nom, setNom] = useState("");
-  const [prenom, setPrenom] = useState("");
+  const [fullName, setFullName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -410,8 +409,7 @@ export function LoginPage({
           password,
           options: {
             data: {
-              nom,
-              prenom,
+              full_name: fullName,
             },
             emailRedirectTo: window.location.origin
           }
@@ -642,40 +640,21 @@ export function LoginPage({
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {!awaitingConfirmation && !isResettingPassword && type === 'signup' && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nom" className="text-sm font-medium">Nom</Label>
-                    <Input
-                      id="nom"
-                      type="text"
-                      placeholder="Doe"
-                      value={nom}
-                      autoComplete="off"
-                      onChange={(e) => setNom(e.target.value)}
-                      onFocus={() => setIsTyping(true)}
-                      onBlur={() => setIsTyping(false)}
-                      required
-                      className="h-12 bg-background border-border/60 focus:border-primary"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="prenom" className="text-sm font-medium">Prénom</Label>
-                    <Input
-                      id="prenom"
-                      type="text"
-                      placeholder="John"
-                      value={prenom}
-                      autoComplete="off"
-                      onChange={(e) => setPrenom(e.target.value)}
-                      onFocus={() => setIsTyping(true)}
-                      onBlur={() => setIsTyping(false)}
-                      required
-                      className="h-12 bg-background border-border/60 focus:border-primary"
-                    />
-                  </div>
-                </div>
-              </>
+              <div className="space-y-2">
+                <Label htmlFor="fullName" className="text-sm font-medium">Full Name</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="John Doe"
+                  value={fullName}
+                  autoComplete="off"
+                  onChange={(e) => setFullName(e.target.value)}
+                  onFocus={() => setIsTyping(true)}
+                  onBlur={() => setIsTyping(false)}
+                  required
+                  className="h-12 bg-background border-border/60 focus:border-primary"
+                />
+              </div>
             )}
 
             {awaitingConfirmation ? (

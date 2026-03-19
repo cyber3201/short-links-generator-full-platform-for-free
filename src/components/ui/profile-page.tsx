@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { User, Lock, Upload, Loader2, Save, X, ArrowLeft, Check, AlertCircle } from "lucide-react";
+import { User, Lock, Upload, Loader2, Save, X, ArrowLeft, Check, AlertCircle, Download, AlertTriangle } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { cn } from "../../lib/utils";
 
@@ -7,9 +7,14 @@ export function ProfilePage({ user, onBack }: { user: any; onBack: () => void })
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || "");
   const [avatarUrl, setAvatarUrl] = useState(user?.user_metadata?.avatar_url || "");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [oldPassword, setOldPassword] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
 
   const showMessage = (text: string, type: "success" | "error") => {
@@ -74,20 +79,91 @@ export function ProfilePage({ user, onBack }: { user: any; onBack: () => void })
 
   const updatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!oldPassword) {
+      showMessage("Please enter your current password first.", "error");
+      return;
+    }
     if (!password || password.length < 6) {
-      showMessage("Password must be at least 6 characters.", "error");
+      showMessage("New password must be at least 6 characters.", "error");
+      return;
+    }
+    if (password !== confirmPassword) {
+      showMessage("New passwords do not match.", "error");
       return;
     }
     setIsSavingPassword(true);
     try {
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: oldPassword
+      });
+      if (verifyError) throw new Error("Incorrect current password.");
+
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
+      
       showMessage("Password updated successfully!", "success");
       setPassword("");
+      setConfirmPassword("");
+      setOldPassword("");
     } catch (error: any) {
       showMessage(error.message || "Failed to update password", "error");
     } finally {
       setIsSavingPassword(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: window.location.origin
+      });
+      if (error) throw error;
+      showMessage("Password reset email sent!", "success");
+    } catch (error: any) {
+      showMessage(error.message, "error");
+    }
+  };
+
+  const handleExportData = async () => {
+    setIsExporting(true);
+    try {
+      const { data: urls } = await supabase.from('urls').select('*').eq('user_id', user.id);
+      const { data: clicks } = await supabase.from('clicks').select('*, urls!inner(user_id)').eq('urls.user_id', user.id);
+      
+      const exportData = {
+        urls: urls || [],
+        clicks: clicks?.map(c => { const { urls, ...rest } = c; return rest; }) || []
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `my-link-data-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showMessage("Data exported successfully!", "success");
+    } catch (error: any) {
+      showMessage("Failed to export data", "error");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.rpc('delete_user_account');
+      if (error) throw error;
+      await supabase.auth.signOut();
+      window.location.reload();
+    } catch (error: any) {
+      showMessage(error.message || "Failed to delete account", "error");
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -191,12 +267,33 @@ export function ProfilePage({ user, onBack }: { user: any; onBack: () => void })
             
             <div className="space-y-4 max-w-md">
               <div>
-                <label className="text-sm font-medium text-muted-foreground mb-1.5 block">New Password</label>
+                <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Current Password</label>
+                <input
+                  type="password"
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  className="w-full h-11 px-4 rounded-xl bg-background border border-input focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all text-sm"
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-medium text-muted-foreground block">New Password</label>
+                  <button type="button" onClick={handleForgotPassword} className="text-xs text-primary hover:underline font-medium">Forgot Password?</button>
+                </div>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter new password (min. 6 chars)"
+                  className="w-full h-11 px-4 rounded-xl bg-background border border-input focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all text-sm mb-4"
+                />
+                <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
                   className="w-full h-11 px-4 rounded-xl bg-background border border-input focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all text-sm"
                 />
               </div>
@@ -205,13 +302,71 @@ export function ProfilePage({ user, onBack }: { user: any; onBack: () => void })
             <div className="flex justify-start pt-2">
               <button
                 type="submit"
-                disabled={isSavingPassword || !password}
+                disabled={isSavingPassword || !password || !oldPassword || !confirmPassword}
                 className="bg-muted text-foreground border border-border/50 text-sm font-semibold px-6 py-2.5 rounded-xl hover:bg-muted/80 transition-all flex items-center gap-2 disabled:opacity-50"
               >
                 {isSavingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : "Update Password"}
               </button>
             </div>
           </form>
+
+          {/* Data Management Export / Delete */}
+          <div className="space-y-6 pt-4 border-t border-border/40">
+            <h3 className="text-lg font-semibold flex items-center gap-2 pb-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" /> Data Management
+            </h3>
+            
+            <div className="grid lg:grid-cols-2 gap-4">
+              <div className="p-5 rounded-2xl border border-primary/20 bg-primary/5 space-y-3">
+                <h4 className="font-semibold text-sm">Export Data</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">Download a JSON file containing all your links and detailed click analytics.</p>
+                <button
+                  type="button"
+                  onClick={handleExportData}
+                  disabled={isExporting}
+                  className="mt-2 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 text-sm font-semibold px-4 py-2 rounded-xl transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  Export JSON
+                </button>
+              </div>
+
+              <div className="p-5 rounded-2xl border border-destructive/20 bg-destructive/5 space-y-3">
+                <h4 className="font-semibold text-sm text-destructive">Delete Account</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">Permanently delete your account, links, and all associated analytics from the database.</p>
+                
+                {showDeleteConfirm ? (
+                  <div className="space-y-3 p-3 bg-card border border-destructive/20 rounded-xl mt-2 animate-in fade-in zoom-in-95">
+                    <p className="text-xs font-semibold text-destructive">Are you absolute sure? This cannot be undone.</p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={handleDeleteAccount}
+                        disabled={isDeleting}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-sm font-semibold px-4 py-2 rounded-lg transition-all flex items-center gap-2 shadow-sm disabled:opacity-70"
+                      >
+                        {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Yes, permanently delete"}
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(false)}
+                        disabled={isDeleting}
+                        className="bg-background text-foreground border border-border text-sm font-medium px-4 py-2 rounded-lg hover:bg-muted transition-all"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="mt-2 bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20 hover:text-destructive-foreground text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-2"
+                  >
+                    Delete Account
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
