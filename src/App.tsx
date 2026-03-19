@@ -4,6 +4,7 @@ import { Link, ArrowRight, Scissors, Copy, Check, Github, History, X, Plus, Sear
 import { LoginPage } from "./components/ui/animated-characters-login-page";
 import { ProfilePage } from "./components/ui/profile-page";
 import { LinkManagementTable } from "./components/ui/link-management-table";
+import { LinkDetailPage } from "./components/ui/link-detail-page";
 import { ThemeToggle } from "./components/ui/theme-toggle";
 import { InfiniteGridBackground } from "./components/ui/infinite-grid";
 import { ShinyButton } from "./components/ui/shiny-button";
@@ -29,9 +30,15 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isProtected, setIsProtected] = useState(false);
   const [linkPassword, setLinkPassword] = useState("");
-  const [view, setView] = useState<'home' | 'login' | 'signup' | 'terms' | 'privacy' | 'profile' | 'dashboard'>('home');
+  const [view, setView] = useState<'home' | 'login' | 'signup' | 'terms' | 'privacy' | 'profile' | 'dashboard' | 'linkDetail'>('home');
   const [user, setUser] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [selectedLinkId, setSelectedLinkId] = useState<string | null>(null);
+
+  // Auto-scroll to top when view changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [view]);
 
   useEffect(() => {
     // Get initial session
@@ -205,7 +212,7 @@ export default function App() {
             className="flex items-center justify-start gap-2 font-bold text-xl sm:text-2xl tracking-tight cursor-pointer w-1/2"
             onClick={() => setView('home')}
           >
-            <img src="https://najemholding.com/wp-content/uploads/2025/02/Logo-NH-White-crop.png" alt="NAJEM HOLDING" className="h-7 sm:h-9 object-contain drop-shadow-md" />
+            <img src="https://i.ibb.co/rGZzYLJV/9-SIR-LOGO.png" alt="9-SIR" className="h-10 sm:h-12 object-contain drop-shadow-md" />
           </div>
           <div className="flex justify-end items-center gap-2 sm:gap-4">
             {user ? (
@@ -286,9 +293,25 @@ export default function App() {
         )}
 
         {view === 'dashboard' && user && (
-          <div className="w-full max-w-[1400px] animate-in fade-in duration-300">
-            <LinkManagementTable userId={user.id} onCreateNew={() => setView('home')} />
+          <div className="w-full px-4 sm:px-8 animate-in fade-in duration-300">
+            <LinkManagementTable 
+              userId={user.id} 
+              onViewDetails={(linkId: string) => {
+                setSelectedLinkId(linkId);
+                setView('linkDetail');
+              }}
+            />
           </div>
+        )}
+
+        {view === 'linkDetail' && user && selectedLinkId && (
+          <LinkDetailPage 
+            linkId={selectedLinkId} 
+            onBack={() => {
+              setSelectedLinkId(null);
+              setView('dashboard');
+            }} 
+          />
         )}
 
         {view === 'home' && (
@@ -414,7 +437,7 @@ export default function App() {
               </button>
             </div>
             
-            <div className="pt-16 grid grid-cols-1 md:grid-cols-3 gap-10 text-left max-w-5xl mx-auto">
+            <div className="pt-16 grid grid-cols-1 md:grid-cols-3 gap-10 text-left max-w-6xl mx-auto">
               {/* Lightning Fast Card */}
               <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-border p-2 md:rounded-[1.5rem] md:p-3 list-none">
                 <GlowingEffect
@@ -425,12 +448,14 @@ export default function App() {
                   inactiveZone={0.01}
                   borderWidth={3}
                 />
-                <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-xl border-[0.75px] bg-background p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:p-6 space-y-3 hover:bg-muted/30 transition-colors">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-2 border-[0.75px] border-border">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                <div className="relative flex min-h-[250px] md:min-h-[280px] h-full flex-col justify-between overflow-hidden rounded-xl border-[0.75px] bg-background p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:p-10 space-y-4 hover:bg-muted/30 transition-colors">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-2 border-[0.75px] border-border shrink-0">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                   </div>
-                  <h3 className="font-semibold text-xl tracking-tight text-foreground">Lightning Fast</h3>
-                  <p className="text-muted-foreground text-sm md:text-base leading-[1.375rem] text-balance">Generate short links instantly with our globally distributed edge infrastructure.</p>
+                  <div>
+                    <h3 className="font-bold text-2xl tracking-tight text-foreground mb-3">Lightning Fast</h3>
+                    <p className="text-muted-foreground text-base leading-relaxed text-balance">Generate short links instantly with our globally distributed edge infrastructure.</p>
+                  </div>
                 </div>
               </div>
 
@@ -444,12 +469,14 @@ export default function App() {
                   inactiveZone={0.01}
                   borderWidth={3}
                 />
-                <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-xl border-[0.75px] bg-background p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:p-6 space-y-3 hover:bg-muted/30 transition-colors">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-2 border-[0.75px] border-border">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <div className="relative flex min-h-[250px] md:min-h-[280px] h-full flex-col justify-between overflow-hidden rounded-xl border-[0.75px] bg-background p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:p-10 space-y-4 hover:bg-muted/30 transition-colors">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-2 border-[0.75px] border-border shrink-0">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                   </div>
-                  <h3 className="font-semibold text-xl tracking-tight text-foreground">Secure & Reliable</h3>
-                  <p className="text-muted-foreground text-sm md:text-base leading-[1.375rem] text-balance">Every link is encrypted and scanned for malware to protect you and your users.</p>
+                  <div>
+                    <h3 className="font-bold text-2xl tracking-tight text-foreground mb-3">Secure & Reliable</h3>
+                    <p className="text-muted-foreground text-base leading-relaxed text-balance">Every link is encrypted and scanned for malware to protect you and your users.</p>
+                  </div>
                 </div>
               </div>
 
@@ -463,12 +490,14 @@ export default function App() {
                   inactiveZone={0.01}
                   borderWidth={3}
                 />
-                <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-xl border-[0.75px] bg-background p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:p-6 space-y-3 hover:bg-muted/30 transition-colors">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-2 border-[0.75px] border-border">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                <div className="relative flex min-h-[250px] md:min-h-[280px] h-full flex-col justify-between overflow-hidden rounded-xl border-[0.75px] bg-background p-8 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:p-10 space-y-4 hover:bg-muted/30 transition-colors">
+                  <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-2 border-[0.75px] border-border shrink-0">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                   </div>
-                  <h3 className="font-semibold text-xl tracking-tight text-foreground">Detailed Analytics</h3>
-                  <p className="text-muted-foreground text-sm md:text-base leading-[1.375rem] text-balance">Track clicks, geographic data, and referrers for every link you create in real-time.</p>
+                  <div>
+                    <h3 className="font-bold text-2xl tracking-tight text-foreground mb-3">Detailed Analytics</h3>
+                    <p className="text-muted-foreground text-base leading-relaxed text-balance">Track clicks, geographic data, and referrers for every link you create in real-time.</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -480,7 +509,7 @@ export default function App() {
             <h2 className="text-3xl font-bold mb-6">Terms of Use</h2>
             <div className="space-y-6 text-muted-foreground leading-relaxed">
               <p>
-                Welcome to NAJEM HOLDING. By accessing or using our URL shortening service, you agree to be bound by these Terms of Use. If you disagree with any part of the terms, you may not access the service.
+                Welcome to Link 9sir. By accessing or using our URL shortening service, you agree to be bound by these Terms of Use. If you disagree with any part of the terms, you may not access the service.
               </p>
               <h3 className="text-xl font-semibold text-foreground">1. Acceptable Use</h3>
               <p>
@@ -509,7 +538,7 @@ export default function App() {
             <h2 className="text-3xl font-bold mb-6">Privacy Policy</h2>
             <div className="space-y-6 text-muted-foreground leading-relaxed">
               <p>
-                Your privacy is important to us. It is NAJEM HOLDING's policy to respect your privacy regarding any information we may collect from you across our website and other sites we own and operate.
+                Your privacy is important to us. It is Link 9sir's policy to respect your privacy regarding any information we may collect from you across our website and other sites we own and operate.
               </p>
               <h3 className="text-xl font-semibold text-foreground">1. Information We Collect</h3>
               <p>
@@ -539,7 +568,7 @@ export default function App() {
         <footer className="relative z-10 border-t border-border/40 bg-background/60 backdrop-blur-xl py-10">
           <div className="container mx-auto max-w-6xl px-4 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2 font-bold text-lg tracking-tight">
-              <img src="https://najemholding.com/wp-content/uploads/2025/02/Logo-NH-White-crop.png" alt="NAJEM HOLDING" className="h-5 sm:h-6 object-contain opacity-80 hover:opacity-100 transition-opacity" />
+              <img src="https://i.ibb.co/rGZzYLJV/9-SIR-LOGO.png" alt="9-SIR" className="h-10 sm:h-12 object-contain opacity-80 hover:opacity-100 transition-opacity" />
             </div>
             <div className="flex items-center gap-4 text-muted-foreground flex-wrap justify-center">
               <button onClick={() => setView('terms')} className="hover:text-foreground transition-colors text-muted-foreground border border-border px-3 py-1 rounded-md text-sm font-medium">Terms of Use</button>

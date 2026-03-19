@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Power, Play, Link, Calendar, Globe, MousePointerClick, Activity, Copy, Lock, Plus, Trash2, Loader2 } from "lucide-react";
+import { Link, Calendar, Globe, Copy, Lock, Plus, Loader2, RefreshCw, X, LinkIcon } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 export interface ShortLink {
@@ -15,25 +15,30 @@ export interface ShortLink {
   top_location: string;
   is_active: boolean;
   is_password_protected: boolean;
-  number: string; // generated for display
+  number: string;
 }
 
 interface LinkManagementTableProps {
   userId: string;
   className?: string;
   onCreateNew?: () => void;
+  onViewDetails?: (linkId: string) => void;
 }
 
 export function LinkManagementTable({
   userId,
   className = "",
-  onCreateNew
+  onCreateNew,
+  onViewDetails
 }: LinkManagementTableProps) {
   const [links, setLinks] = useState<ShortLink[]>([]);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
-  const [selectedLink, setSelectedLink] = useState<ShortLink | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newUrl, setNewUrl] = useState("");
+  const [isProtected, setIsProtected] = useState(false);
+  const [linkPassword, setLinkPassword] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     fetchLinks();
@@ -57,58 +62,34 @@ export function LinkManagementTable({
     setIsLoading(false);
   };
 
-  const handleStatusChange = async (linkId: string, newActiveState: boolean) => {
-    // Optimistic UI update
-    setLinks(prev => prev.map(link => 
-      link.id === linkId ? { ...link, is_active: newActiveState } : link
-    ));
+  const handleCreateLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUrl || isCreating) return;
 
-    if (selectedLink?.id === linkId) {
-       setSelectedLink(prev => prev ? { ...prev, is_active: newActiveState } : null);
-    }
+    setIsCreating(true);
+    const shortCode = Math.random().toString(36).substring(2, 8);
+    const baseUrl = window.location.origin;
+    const newShortUrl = `${baseUrl}/${shortCode}`;
 
-    // Backend update
-    const { error } = await supabase
-      .from('urls')
-      .update({ is_active: newActiveState })
-      .eq('id', linkId);
-      
-    if (error) {
-      console.error("Failed to update status", error);
-      fetchLinks(); // Revert on failure
-    }
-  };
-
-  const handleDelete = async (linkId: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this link? This will break any existing URLs shared online.")) {
-      return;
-    }
-    
-    setIsDeleting(linkId);
-
-    const { error } = await supabase
-      .from('urls')
-      .delete()
-      .eq('id', linkId);
+    const { error } = await supabase.rpc('create_short_url_secure', {
+      p_original_url: newUrl,
+      p_short_code: shortCode,
+      p_short_url: newShortUrl,
+      p_user_id: userId,
+      p_password: isProtected ? linkPassword : null
+    });
 
     if (error) {
-      console.error("Failed to delete link", error);
-      alert("Failed to delete the link. Please try again.");
+      console.error("Error creating link:", error);
+      alert(`Failed to create short link: ${error.message}`);
     } else {
-      setLinks(prev => prev.filter(l => l.id !== linkId));
-      if (selectedLink?.id === linkId) {
-        setSelectedLink(null);
-      }
+      setNewUrl("");
+      setIsProtected(false);
+      setLinkPassword("");
+      setShowCreateModal(false);
+      await fetchLinks();
     }
-    setIsDeleting(null);
-  };
-
-  const openLinkModal = (link: ShortLink) => {
-    setSelectedLink(link);
-  };
-
-  const closeLinkModal = () => {
-    setSelectedLink(null);
+    setIsCreating(false);
   };
 
   const handleCopy = async (e: React.MouseEvent, textToCopy: string) => {
@@ -123,13 +104,8 @@ export function LinkManagementTable({
         textArea.style.left = "-999999px";
         document.body.prepend(textArea);
         textArea.select();
-        try {
-          document.execCommand('copy');
-        } catch (error) {
-          console.error("Fallback copy failed", error);
-        } finally {
-          textArea.remove();
-        }
+        try { document.execCommand('copy'); } catch (err) { console.error(err); }
+        finally { textArea.remove(); }
       }
     } catch (err) {
       console.error("Failed to copy text: ", err);
@@ -142,9 +118,7 @@ export function LinkManagementTable({
     const filledBars = Math.round((percentage / 100) * 10);
     
     const getBarColor = (index: number) => {
-      if (index >= filledBars) {
-        return "bg-muted/40 border border-border/30";
-      }
+      if (index >= filledBars) return "bg-muted/40 border border-border/30";
       return is_active ? "bg-primary" : "bg-muted-foreground/30";
     };
     
@@ -152,10 +126,7 @@ export function LinkManagementTable({
       <div className="flex items-center gap-3">
         <div className="flex gap-1">
           {Array.from({ length: 10 }).map((_, index) => (
-            <div
-              key={index}
-              className={`w-1.5 h-4 sm:h-5 rounded-full transition-all duration-500 ${getBarColor(index)}`}
-            />
+            <div key={index} className={`w-1.5 h-4 sm:h-5 rounded-full transition-all duration-500 ${getBarColor(index)}`} />
           ))}
         </div>
         <span className="text-xs sm:text-sm font-mono text-foreground font-medium min-w-[3rem]">
@@ -167,18 +138,17 @@ export function LinkManagementTable({
 
   const getStatusBadge = (is_active: boolean) => {
     if (is_active) {
-        return (
-          <div className="px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center">
-            <span className="text-green-400 text-xs sm:text-sm font-medium">Active</span>
-          </div>
-        );
-    } else {
-        return (
-          <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center">
-            <span className="text-red-400 text-xs sm:text-sm font-medium">Disabled</span>
-          </div>
-        );
+      return (
+        <div className="px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center">
+          <span className="text-green-400 text-xs sm:text-sm font-medium">Active</span>
+        </div>
+      );
     }
+    return (
+      <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+        <span className="text-red-400 text-xs sm:text-sm font-medium">Disabled</span>
+      </div>
+    );
   };
 
   const getStatusGradient = (is_active: boolean) => {
@@ -187,373 +157,377 @@ export function LinkManagementTable({
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric"
+      month: "short", day: "numeric", year: "numeric"
     });
   };
 
   if (isLoading) {
-    return <div className="text-center py-10 text-muted-foreground animate-pulse">Loading dashboard...</div>;
+    return (
+      <div className="w-full px-4 sm:px-8 py-12 flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
   }
-
 
   if (links.length === 0) {
     return (
-      <div className={`w-full mx-auto mt-10 ${className}`}>
-        <div className="relative border border-border/30 rounded-2xl p-4 sm:p-6 bg-card/60 backdrop-blur-xl shadow-xl flex flex-col items-center justify-center py-20 gap-6">
-          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-            <Link className="w-10 h-10" />
+      <div className={`w-full ${className}`}>
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <h2 className="text-xl font-bold tracking-tight text-foreground">Link Analytics Dashboard</h2>
           </div>
-          <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground">No links found</h2>
-            <p className="text-muted-foreground font-medium max-w-sm">You haven't shortened any links yet. Create your first link to see tracking analytics here.</p>
+          <div className="bg-card rounded-2xl border border-border/40 shadow-sm flex flex-col items-center justify-center py-20 gap-6">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+              <Link className="w-10 h-10" />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-2xl font-bold tracking-tight text-foreground">No links found</h3>
+              <p className="text-muted-foreground font-medium max-w-sm">You haven't shortened any links yet. Create your first link to see tracking analytics here.</p>
+            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="mt-4 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-md"
+            >
+              <Plus className="w-5 h-5" /> Generate Short Link
+            </button>
           </div>
-          <button 
-             onClick={onCreateNew}
-             className="mt-4 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-md"
-          >
-            <Plus className="w-5 h-5" /> Generate Short Link
-          </button>
         </div>
+
+        {/* Create Link Modal */}
+        <AnimatePresence>
+          {showCreateModal && (
+            <CreateLinkModal
+              newUrl={newUrl}
+              setNewUrl={setNewUrl}
+              isProtected={isProtected}
+              setIsProtected={setIsProtected}
+              linkPassword={linkPassword}
+              setLinkPassword={setLinkPassword}
+              isCreating={isCreating}
+              onSubmit={handleCreateLink}
+              onClose={() => { setShowCreateModal(false); setNewUrl(""); setIsProtected(false); setLinkPassword(""); }}
+            />
+          )}
+        </AnimatePresence>
       </div>
     );
   }
 
   return (
-    <div className={`w-full mx-auto mt-10 ${className}`}>
-      <div className="relative border border-border/30 rounded-2xl p-4 sm:p-6 bg-card/60 backdrop-blur-xl shadow-xl">
+    <div className={`w-full ${className}`}>
+      <div className="max-w-7xl mx-auto space-y-6">
+
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <h2 className="text-xl font-bold tracking-tight text-foreground">Link Analytics Dashboard</h2>
-            </div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <h2 className="text-xl font-bold tracking-tight text-foreground">Link Analytics Dashboard</h2>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <div className="text-sm font-medium text-muted-foreground bg-background/50 px-4 py-2 rounded-full border border-border/50">
+            <div className="text-sm font-medium text-muted-foreground bg-card px-4 py-2 rounded-full border border-border/50">
               {links.filter(s => s.is_active).length} Active • {links.filter(s => !s.is_active).length} Disabled
             </div>
-            <button 
-               onClick={onCreateNew}
-               className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground font-semibold rounded-full hover:bg-primary/90 transition-all shadow-sm text-sm"
-               title="Create New Link"
+            <button
+              onClick={fetchLinks}
+              className="flex items-center gap-1.5 px-4 py-2 bg-card text-muted-foreground hover:text-foreground font-semibold rounded-full hover:bg-muted/50 transition-all border border-border/50 text-sm"
+              title="Refresh Data"
+            >
+              <RefreshCw className="w-4 h-4" /> Refresh
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground font-semibold rounded-full hover:bg-primary/90 transition-all shadow-sm text-sm"
+              title="Create New Link"
             >
               <Plus className="w-4 h-4" /> New Link
             </button>
           </div>
         </div>
 
-        {/* Table Wrapper for Horizontal Scroll on Desktop, Stacked Cards on Mobile */}
-        <div className="pb-4">
-          <motion.div
-            className="space-y-4 sm:space-y-3"
-            variants={{
-              visible: { transition: { staggerChildren: 0.05, delayChildren: 0.1 } }
-            }}
-            initial="hidden"
-            animate="visible"
-          >
-            {/* Headers (Desktop Only) */}
-            <div className="hidden sm:grid grid-cols-12 gap-4 px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              <div className="col-span-1">No</div>
-              <div className="col-span-3">Original URL</div>
-              <div className="col-span-2">Short Code</div>
-              <div className="col-span-2">Location</div>
-              <div className="col-span-2">Clicks Activity</div>
-              <div className="col-span-1 border-l border-transparent">Created</div>
-              <div className="col-span-1 text-right">Status</div>
-            </div>
+        {/* Links List */}
+        <motion.div
+          className="space-y-3"
+          variants={{ visible: { transition: { staggerChildren: 0.05, delayChildren: 0.1 } } }}
+          initial="hidden"
+          animate="visible"
+        >
+          {/* Headers (Desktop Only) */}
+          <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <div className="col-span-1">No</div>
+            <div className="col-span-3">Original URL</div>
+            <div className="col-span-2">Short Code</div>
+            <div className="col-span-2">Location</div>
+            <div className="col-span-2">Clicks Activity</div>
+            <div className="col-span-1">Created</div>
+            <div className="col-span-1 text-right">Status</div>
+          </div>
 
-            {/* Empty state embedded logic is now moved upwards for better UX */}
-            {links.map((link) => (
+          {links.map((link) => (
+            <motion.div
+              key={link.id}
+              variants={{
+                hidden: { opacity: 0, y: 10, scale: 0.98, filter: "blur(2px)" },
+                visible: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { type: "spring", stiffness: 350, damping: 25 } },
+              }}
+              className="relative cursor-pointer"
+              onMouseEnter={() => setHoveredLink(link.id)}
+              onMouseLeave={() => setHoveredLink(null)}
+              onClick={() => onViewDetails?.(link.id)}
+            >
               <motion.div
-                key={link.id}
-                variants={{
-                  hidden: { opacity: 0, y: 10, scale: 0.98, filter: "blur(2px)" },
-                  visible: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { type: "spring", stiffness: 350, damping: 25 } },
-                }}
-                className="relative cursor-pointer"
-                onMouseEnter={() => setHoveredLink(link.id)}
-                onMouseLeave={() => setHoveredLink(null)}
-                onClick={() => openLinkModal(link)}
+                className="relative bg-card border border-border/50 rounded-xl p-4 overflow-hidden transition-colors hover:border-primary/30"
+                whileHover={{ y: -2 }}
               >
-                <motion.div
-                  className="relative bg-background/80 border border-border/50 rounded-xl p-4 overflow-hidden transition-colors hover:border-primary/30"
-                  whileHover={{ y: -2 }}
-                >
-                  <div 
-                    className={`absolute inset-0 bg-gradient-to-l ${getStatusGradient(link.is_active)} pointer-events-none opacity-50`}
-                    style={{ backgroundSize: "30% 100%", backgroundPosition: "right", backgroundRepeat: "no-repeat" }} 
-                  />
-                  
-                  {/* Desktop Layout */}
-                  <div className="hidden sm:grid relative grid-cols-12 gap-4 items-center">
-                    <div className="col-span-1">
-                      <span className="text-xl font-bold text-muted-foreground/50">{link.number}</span>
-                    </div>
+                <div
+                  className={`absolute inset-0 bg-gradient-to-l ${getStatusGradient(link.is_active)} pointer-events-none opacity-50`}
+                  style={{ backgroundSize: "30% 100%", backgroundPosition: "right", backgroundRepeat: "no-repeat" }}
+                />
 
-                    <div className="col-span-3 flex items-center gap-2 pr-4 overflow-hidden">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
-                        <Link className="w-4 h-4 text-primary" />
+                {/* Desktop Layout */}
+                <div className="hidden lg:grid relative grid-cols-12 gap-4 items-center">
+                  <div className="col-span-1">
+                    <span className="text-xl font-bold text-muted-foreground/50">{link.number}</span>
+                  </div>
+                  <div className="col-span-3 flex items-center gap-2 pr-4 overflow-hidden">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
+                      <Link className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-foreground font-medium truncate" title={link.original_url}>
+                      {link.original_url}
+                    </span>
+                    <button
+                      onClick={(e) => handleCopy(e, link.original_url)}
+                      className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors shrink-0"
+                      title="Copy original link"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="col-span-2 flex items-center gap-2">
+                    <span className="text-primary font-mono text-sm bg-primary/5 px-2.5 py-1 rounded-md border border-primary/10 truncate">
+                      /{link.short_code}
+                    </span>
+                    {link.is_password_protected && (
+                      <div className="bg-amber-500/10 text-amber-500 p-1.5 rounded-md border border-amber-500/20" title="Password Protected">
+                        <Lock className="w-3.5 h-3.5" />
                       </div>
-                      <span className="text-foreground font-medium truncate" title={link.original_url}>
-                        {link.original_url}
-                      </span>
-                      <button 
-                        onClick={(e) => handleCopy(e, link.original_url)}
-                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors shrink-0"
-                        title="Copy original link"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    )}
+                    <button
+                      onClick={(e) => handleCopy(e, link.short_url)}
+                      className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors shrink-0"
+                      title="Copy short link"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="col-span-2 flex items-center gap-2 text-sm text-foreground">
+                    <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="truncate">{link.top_location}</span>
+                  </div>
+                  <div className="col-span-2">
+                    {getCPUBars(link.clicks, link.is_active)}
+                  </div>
+                  <div className="col-span-1 text-sm text-muted-foreground font-medium">
+                    {formatDate(link.created_at)}
+                  </div>
+                  <div className="col-span-1 flex justify-end">
+                    {getStatusBadge(link.is_active)}
+                  </div>
+                </div>
 
-                    <div className="col-span-2 flex items-center gap-2">
-                      <span className="text-primary font-mono text-sm bg-primary/5 px-2.5 py-1 rounded-md border border-primary/10 truncate">
+                {/* Mobile / Tablet Layout */}
+                <div className="lg:hidden relative flex flex-col gap-3">
+                  <div className="flex justify-between items-center w-full">
+                    <div className="flex items-center gap-2">
+                      <span className="text-primary font-mono text-xs font-semibold tracking-wider bg-primary/5 px-2.5 py-1 rounded-md border border-primary/10">
                         /{link.short_code}
                       </span>
                       {link.is_password_protected && (
-                         <div className="bg-amber-500/10 text-amber-500 p-1.5 rounded-md border border-amber-500/20" title="Password Protected">
-                           <Lock className="w-3.5 h-3.5" />
-                         </div>
+                        <div className="bg-amber-500/10 text-amber-500 p-1 rounded-md border border-amber-500/20" title="Password Protected">
+                          <Lock className="w-3.5 h-3.5" />
+                        </div>
                       )}
-                      <button 
+                      <button
                         onClick={(e) => handleCopy(e, link.short_url)}
-                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors shrink-0"
+                        className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors"
                         title="Copy short link"
                       >
                         <Copy className="w-3.5 h-3.5" />
                       </button>
                     </div>
+                    {getStatusBadge(link.is_active)}
+                  </div>
 
-                    <div className="col-span-2 flex items-center gap-2 text-sm text-foreground">
-                      <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
+                      <Link className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-foreground font-semibold truncate flex-1" title={link.original_url}>
+                      {link.original_url}
+                    </span>
+                    <button
+                      onClick={(e) => handleCopy(e, link.original_url)}
+                      className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors shrink-0"
+                      title="Copy original link"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium bg-muted/30 p-3 rounded-lg border border-border/30">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Globe className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">{link.top_location}</span>
                     </div>
-
-                    <div className="col-span-2">
-                      {getCPUBars(link.clicks, link.is_active)}
-                    </div>
-
-                    <div className="col-span-1 text-sm text-muted-foreground font-medium">
-                      {formatDate(link.created_at)}
-                    </div>
-
-                    <div className="col-span-1 flex justify-end">
-                      {getStatusBadge(link.is_active)}
+                    <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>{formatDate(link.created_at)}</span>
                     </div>
                   </div>
 
-                  {/* Mobile Layout */}
-                  <div className="sm:hidden relative flex flex-col gap-4">
-                    <div className="flex justify-between items-center w-full">
-                      <div className="flex items-center gap-2">
-                        <span className="text-primary font-mono text-xs font-semibold tracking-wider bg-primary/5 px-2.5 py-1 rounded-md border border-primary/10">
-                          /{link.short_code}
-                        </span>
-                        {link.is_password_protected && (
-                           <div className="bg-amber-500/10 text-amber-500 p-1 rounded-md border border-amber-500/20" title="Password Protected">
-                             <Lock className="w-3.5 h-3.5" />
-                           </div>
-                        )}
-                        <button 
-                          onClick={(e) => handleCopy(e, link.short_url)}
-                          className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors"
-                          title="Copy short link"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      {getStatusBadge(link.is_active)}
-                    </div>
-                    
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
-                        <Link className="w-4 h-4 text-primary" />
-                      </div>
-                      <span className="text-foreground font-semibold text-lg truncate w-full" title={link.original_url}>
-                        {link.original_url}
-                      </span>
-                      <button 
-                        onClick={(e) => handleCopy(e, link.original_url)}
-                        className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors shrink-0"
-                        title="Copy original link"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-6 text-sm text-muted-foreground font-medium bg-muted/30 p-3 rounded-lg border border-border/30">
-                      <div className="flex items-center gap-1.5 truncate">
-                        <Globe className="w-3.5 h-3.5" />
-                        <span className="truncate max-w-[120px]">{link.top_location}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 ml-auto">
-                        <Calendar className="w-3.5 h-3.5" />
-                        <span>{formatDate(link.created_at)}</span>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-border/30 w-full">
-                      {getCPUBars(link.clicks, link.is_active)}
-                    </div>
+                  <div className="pt-2 border-t border-border/30 w-full">
+                    {getCPUBars(link.clicks, link.is_active)}
                   </div>
-                </motion.div>
+                </div>
               </motion.div>
-            ))}
-          </motion.div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+
+      {/* Create Link Modal */}
+      <AnimatePresence>
+        {showCreateModal && (
+          <CreateLinkModal
+            newUrl={newUrl}
+            setNewUrl={setNewUrl}
+            isProtected={isProtected}
+            setIsProtected={setIsProtected}
+            linkPassword={linkPassword}
+            setLinkPassword={setLinkPassword}
+            isCreating={isCreating}
+            onSubmit={handleCreateLink}
+            onClose={() => { setShowCreateModal(false); setNewUrl(""); setIsProtected(false); setLinkPassword(""); }}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ------------------------------------------------
+   Create Link Modal (Popup)
+------------------------------------------------ */
+function CreateLinkModal({
+  newUrl, setNewUrl,
+  isProtected, setIsProtected,
+  linkPassword, setLinkPassword,
+  isCreating,
+  onSubmit, onClose
+}: {
+  newUrl: string; setNewUrl: (v: string) => void;
+  isProtected: boolean; setIsProtected: (v: boolean) => void;
+  linkPassword: string; setLinkPassword: (v: string) => void;
+  isCreating: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+  onClose: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+      {/* Modal */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        className="relative bg-card border border-border/50 rounded-2xl p-6 w-full max-w-lg shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-muted/50 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+            <LinkIcon className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-foreground">Create New Link</h3>
+            <p className="text-sm text-muted-foreground">Shorten a URL and start tracking clicks</p>
+          </div>
         </div>
 
-        <AnimatePresence>
-          {selectedLink && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="absolute inset-0 bg-background/80 backdrop-blur-md flex flex-col rounded-2xl z-20 overflow-hidden"
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div>
+            <label className="text-sm font-semibold text-foreground mb-1.5 block">Destination URL</label>
+            <input
+              type="url"
+              required
+              value={newUrl}
+              onChange={(e) => setNewUrl(e.target.value)}
+              placeholder="https://example.com/very-long-url"
+              className="w-full px-4 py-3 bg-background border border-border/50 rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all text-sm"
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsProtected(!isProtected)}
+              className={`relative w-11 h-6 rounded-full transition-colors ${isProtected ? 'bg-primary' : 'bg-muted'}`}
             >
-              <div className="relative bg-gradient-to-r from-card to-transparent p-5 sm:p-6 border-b border-border/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
-                    <Activity className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="overflow-hidden">
-                    <div className="flex items-center gap-2 mt-1">
-                      <h3 className="text-lg font-bold text-foreground truncate w-full max-w-[200px] sm:max-w-[400px]" title={selectedLink.original_url}>
-                        {selectedLink.original_url}
-                      </h3>
-                      <button 
-                        onClick={(e) => handleCopy(e, selectedLink.original_url)}
-                        className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors shrink-0"
-                        title="Copy original link"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-primary font-mono text-xs font-semibold tracking-wider">
-                        {selectedLink.short_url}
-                      </span>
-                      <button 
-                        onClick={(e) => handleCopy(e, selectedLink.short_url)}
-                        className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded-md transition-colors shrink-0"
-                        title="Copy short link"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${isProtected ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+            </button>
+            <div className="flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground font-medium">Password protect</span>
+            </div>
+          </div>
 
-                <div className="flex items-center gap-3">
-                  {selectedLink.is_active ? (
-                    <motion.button
-                      className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 rounded-xl text-sm font-semibold transition-colors"
-                      onClick={() => handleStatusChange(selectedLink.id, false)}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Power className="w-4 h-4" /> Stop Link
-                    </motion.button>
-                  ) : (
-                    <motion.button
-                      className="flex items-center gap-2 px-4 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/30 rounded-xl text-sm font-semibold transition-colors"
-                      onClick={() => handleStatusChange(selectedLink.id, true)}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Play className="w-4 h-4" /> Enable Link
-                    </motion.button>
-                  )}
-
-                  <motion.button
-                    className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded-xl text-sm font-semibold transition-colors shrink-0"
-                    onClick={() => handleDelete(selectedLink.id)}
-                    disabled={isDeleting === selectedLink.id}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    title="Permanently delete link"
-                  >
-                    {isDeleting === selectedLink.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="w-4 h-4" />
-                    )}
-                    <span className="hidden sm:inline">Delete</span>
-                  </motion.button>
-
-                  <motion.button
-                    className="w-10 h-10 bg-background hover:bg-muted rounded-full flex items-center justify-center border border-border/50 text-muted-foreground ml-2 shadow-sm shrink-0"
-                    onClick={closeLinkModal}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <X className="w-5 h-5" />
-                  </motion.button>
-                </div>
-              </div>
-
-              <div className="flex-1 p-6 space-y-6 overflow-y-auto bg-gradient-to-b from-transparent to-muted/10">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="bg-card rounded-2xl p-4 border border-border/40 shadow-sm flex flex-col justify-center">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                      <MousePointerClick className="w-3.5 h-3.5" /> Total Clicks
-                    </label>
-                    <div className="text-3xl font-extrabold text-foreground">
-                      {selectedLink.clicks}
-                    </div>
-                  </div>
-
-                  <div className="bg-card rounded-2xl p-4 border border-border/40 shadow-sm flex flex-col justify-center">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                      <Globe className="w-3.5 h-3.5" /> Top Location
-                    </label>
-                    <div className="text-lg font-semibold text-foreground truncate">
-                      {selectedLink.top_location}
-                    </div>
-                  </div>
-
-                  <div className="bg-card rounded-2xl p-4 border border-border/40 shadow-sm flex flex-col justify-center">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                      <Calendar className="w-3.5 h-3.5" /> Created On
-                    </label>
-                    <div className="text-base font-semibold text-foreground">
-                      {formatDate(selectedLink.created_at)}
-                    </div>
-                  </div>
-
-                  <div className="bg-card rounded-2xl p-4 border border-border/40 shadow-sm flex flex-col justify-center">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                      <Power className="w-3.5 h-3.5" /> Status
-                    </label>
-                    <div className="mt-1 inline-flex">
-                      {getStatusBadge(selectedLink.is_active)}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-card rounded-2xl p-5 border border-border/40 shadow-sm">
-                  <label className="text-sm font-bold text-foreground flex items-center gap-2 mb-4">
-                    <Activity className="w-4 h-4 text-primary" /> Relative Performance
-                  </label>
-                  <div className="p-2 border border-border/30 rounded-xl bg-background/50">
-                    {getCPUBars(selectedLink.clicks, selectedLink.is_active)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-4 leading-relaxed">
-                    This visualization shows the popularity of this link relative to your other active links.
-                    {selectedLink.is_active 
-                      ? " The link is currently fully operational and resolving traffic." 
-                      : " Traffic is currently disabled; visitors will see an error page."}
-                  </p>
-                </div>
-              </div>
+          {isProtected && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+            >
+              <input
+                type="password"
+                required={isProtected}
+                value={linkPassword}
+                onChange={(e) => setLinkPassword(e.target.value)}
+                placeholder="Enter a password"
+                className="w-full px-4 py-3 bg-background border border-border/50 rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all text-sm"
+              />
             </motion.div>
           )}
-        </AnimatePresence>
-      </div>
-    </div>
+
+          <button
+            type="submit"
+            disabled={isCreating || !newUrl}
+            className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+          >
+            {isCreating ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</>
+            ) : (
+              <><Plus className="w-4 h-4" /> Create Short Link</>
+            )}
+          </button>
+        </form>
+      </motion.div>
+    </motion.div>
   );
 }

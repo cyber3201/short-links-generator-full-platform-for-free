@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Loader2, Lock, ArrowRight, XCircle } from 'lucide-react';
@@ -9,10 +9,14 @@ export default function RedirectHandler() {
   const [needsPassword, setNeedsPassword] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+  const hasProcessed = useRef(false);
 
   useEffect(() => {
     const fetchOriginalUrl = async () => {
       if (!shortCode) return;
+      // Prevent double-firing in React 18 StrictMode (dev only)
+      if (hasProcessed.current) return;
+      hasProcessed.current = true;
 
       try {
         // First check if it exists and requires a password to avoid leaking the original URL immediately
@@ -49,33 +53,60 @@ export default function RedirectHandler() {
     fetchOriginalUrl();
   }, [shortCode]);
 
-  const processAndRedirect = async (urlId: string, destinationUrl: string, existingClicks?: number, linkUserId?: string) => {
+  const processAndRedirect = async (urlId: string, destinationUrl: string, existingClicks?: number) => {
     try {
-      if (existingClicks === undefined || linkUserId === undefined) {
-          // Re-fetch clicks info since we didn't initially grab it to avoid messy typing overhead here, or just grab the session
-          const { data } = await supabase.from('urls').select('clicks, user_id').eq('id', urlId).single();
+      if (existingClicks === undefined) {
+          const { data } = await supabase.from('urls').select('clicks').eq('id', urlId).single();
           if (data) {
              existingClicks = data.clicks;
-             linkUserId = data.user_id;
           }
       }
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      const currentUser = sessionData.session?.user;
+      // Try to get geolocation data for analytics (using CORS-friendly APIs)
+      let geoCountry: string | null = null;
+      let geoCity: string | null = null;
+      let geoIp: string | null = null;
+      
+      // API 1: geojs.io — fully CORS-supported, no key needed
+      try {
+        const geoResponse = await fetch('https://get.geojs.io/v1/ip/geo.json', { signal: AbortSignal.timeout(4000) });
+        if (geoResponse.ok) {
+          const geoData = await geoResponse.json();
+          geoCountry = geoData.country || null;
+          geoCity = geoData.city || null;
+          geoIp = geoData.ip || null;
+        }
+      } catch (err) {
+        console.warn('[GeoJS] Failed:', err);
+      }
 
-      // Condition to restrict incrementing clicks for the owner
-      if (!currentUser || currentUser.id !== linkUserId) {
+      // API 2: Fallback to ipwho.is if primary returned nothing
+      if (!geoCountry) {
+        try {
+          const fallback = await fetch('https://ipwho.is/', { signal: AbortSignal.timeout(4000) });
+          if (fallback.ok) {
+            const fbData = await fallback.json();
+            if (fbData.success !== false) {
+              geoCountry = fbData.country || null;
+              geoCity = fbData.city || null;
+              geoIp = geoIp || fbData.ip || null;
+            }
+          }
+        } catch (err) {
+          console.warn('[ipwho] Failed:', err);
+        }
+      }
+
+      // Await both DB operations to ensure they complete before the page navigates away
+      await Promise.all([
         supabase
           .from('urls')
           .update({ clicks: (existingClicks || 0) + 1 })
-          .eq('id', urlId)
-          .then();
-
+          .eq('id', urlId),
         supabase
           .from('clicks')
-          .insert([{ url_id: urlId }])
-          .then();
-      }
+          .insert([{ url_id: urlId, country: geoCountry, city: geoCity, ip_address: geoIp }])
+      ]);
 
       window.location.href = destinationUrl;
     } catch (e) {
@@ -111,7 +142,7 @@ export default function RedirectHandler() {
           }
 
           // Verified successfully!
-          await processAndRedirect(rpcResult.id, rpcResult.url, rpcResult.clicks, rpcResult.user_id);
+          await processAndRedirect(rpcResult.id, rpcResult.url, rpcResult.clicks);
       } catch (e) {
           setError("Unexpected verification error.");
           setIsVerifying(false);

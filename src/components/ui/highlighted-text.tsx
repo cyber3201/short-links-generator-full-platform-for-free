@@ -59,9 +59,8 @@ export function HighlightedText({
         className="absolute inset-0 -left-[0.15em] -right-[0.18em] bg-primary z-0 rounded-sm"
         variants={variants}
         transition={{
-          type: "spring",
-          damping: 30,
-          stiffness: 300,
+          duration: 1.25,
+          ease: "easeInOut",
           delay,
         }}
       />
