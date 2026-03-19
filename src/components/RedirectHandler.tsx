@@ -19,10 +19,10 @@ export default function RedirectHandler() {
       hasProcessed.current = true;
 
       try {
-        // First check if it exists and requires a password to avoid leaking the original URL immediately
+        // First check if it exists and requires a password without leaking the original URL over the network
         const { data: initialData, error: initialError } = await supabase
           .from('urls')
-          .select('id, is_active, is_password_protected, original_url')
+          .select('id, is_active, is_password_protected')
           .eq('short_code', shortCode)
           .single();
 
@@ -41,8 +41,19 @@ export default function RedirectHandler() {
           return;
         }
 
-        // If not protected, proceed seamlessly
-        await processAndRedirect(initialData.id, initialData.original_url);
+        // If not protected, proceed seamlessly by fetching the actual URL
+        const { data: urlData, error: urlError } = await supabase
+          .from('urls')
+          .select('original_url')
+          .eq('id', initialData.id)
+          .single();
+
+        if (urlError || !urlData) {
+          setError("Failed to resolve destination URL.");
+          return;
+        }
+
+        await processAndRedirect(initialData.id, urlData.original_url);
 
       } catch (err: any) {
         console.error("Unexpected error during redirect lookup:", err);
@@ -105,7 +116,13 @@ export default function RedirectHandler() {
           .eq('id', urlId),
         supabase
           .from('clicks')
-          .insert([{ url_id: urlId, country: geoCountry, city: geoCity, ip_address: geoIp }])
+          .insert([{ 
+             url_id: urlId, 
+             country: geoCountry, 
+             city: geoCity, 
+             ip_address: geoIp,
+             user_agent: navigator.userAgent 
+          }])
       ]);
 
       window.location.href = destinationUrl;

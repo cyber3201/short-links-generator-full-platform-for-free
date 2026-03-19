@@ -190,6 +190,8 @@ export function LoginPage({
   // New auth states
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const [otp, setOtp] = useState(["", "", "", "", "", "", "", ""]);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const [mouseX, setMouseX] = useState<number>(0);
   const [mouseY, setMouseY] = useState<number>(0);
@@ -315,13 +317,67 @@ export function LoginPage({
 
   const isPasswordValid = password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password);
 
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    // Auto-advance
+    if (value !== "" && index < 7) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && otp[index] === "" && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleResendOtp = async () => {
+    try {
+      setError("");
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) throw error;
+      alert("Verification code resent to your email.");
+    } catch (err: any) {
+      setError(err.message || "Failed to resend code.");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     
-    if (emailErrorMsg) {
+    if (emailErrorMsg && !awaitingConfirmation) {
        setError(emailErrorMsg);
        return;
+    }
+
+    if (awaitingConfirmation) {
+      const token = otp.join('');
+      if (token.length < 8) {
+        setError("Please enter the 8-digit verification code.");
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase.auth.verifyOtp({
+          email,
+          token,
+          type: 'signup'
+        });
+        if (error) throw error;
+        if (onAuth && data.user) {
+          onAuth(data.user.email || email);
+        }
+      } catch (err: any) {
+        setError(err.message || "Invalid or expired verification code.");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
     }
 
     if (type === 'signup') {
@@ -632,7 +688,43 @@ export function LoginPage({
               </>
             )}
 
-            {awaitingConfirmation ? null : (
+            {awaitingConfirmation ? (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="flex justify-center gap-2 sm:gap-4 mt-4">
+                  {otp.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={(el) => (otpRefs.current[index] = el)}
+                      type="text"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(index, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                      onFocus={() => setIsTyping(true)}
+                      onBlur={() => setIsTyping(false)}
+                      className="w-8 h-10 sm:w-10 sm:h-12 md:w-12 md:h-14 text-center text-lg sm:text-xl font-bold bg-background border border-border/60 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                    />
+                  ))}
+                </div>
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    className="text-sm text-primary hover:underline font-medium"
+                  >
+                    Didn't receive the code? Resend
+                  </button>
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 text-base font-medium mt-4" 
+                  size="lg" 
+                  disabled={isLoading || otp.join('').length < 8}
+                >
+                  {isLoading ? "Verifying..." : "Verify & Continue"}
+                </Button>
+              </div>
+            ) : (
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                 <Input

@@ -34,6 +34,7 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [selectedLinkId, setSelectedLinkId] = useState<string | null>(null);
+  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
 
   // Auto-scroll to top when view changes
   useEffect(() => {
@@ -48,7 +49,10 @@ export default function App() {
     });
 
     // Listen for auth changes (login/logout/signup)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecoveryMode(true);
+      }
       setUser(session?.user ?? null);
       if (session?.user) {
          fetchHistory(session.user.id);
@@ -280,7 +284,48 @@ export default function App() {
         view === 'dashboard' ? "py-8" : "py-8 md:py-20"
       )}>
 
-        {(view === 'login' || view === 'signup') && (
+        {passwordRecoveryMode ? (
+          <div className="w-full max-w-md bg-card/80 backdrop-blur-xl rounded-[2rem] border border-border/50 shadow-2xl p-8 animate-in fade-in zoom-in-95 mt-10">
+            <div className="bg-primary/10 text-primary mb-6 p-4 rounded-full inline-flex mx-auto border border-primary/20 shadow-inner">
+               <Lock className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2 tracking-tight">Set New Password</h2>
+            <p className="text-muted-foreground text-sm mb-6">Enter your new secure password below to recover your account.</p>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const form = e.target as HTMLFormElement;
+              const newPassword = (form.elements.namedItem('newPassword') as HTMLInputElement).value;
+              const { error } = await supabase.auth.updateUser({ password: newPassword });
+              if (error) {
+                alert("Failed to update password: " + error.message);
+              } else {
+                alert("Password updated successfully!");
+                setPasswordRecoveryMode(false);
+                setView('dashboard');
+              }
+            }} className="space-y-4 text-left">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">New Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-muted-foreground">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <input 
+                    name="newPassword" 
+                    type="password" 
+                    required 
+                    minLength={8}
+                    className="w-full h-12 pl-12 pr-4 bg-background border border-border/50 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" 
+                    placeholder="••••••••" 
+                  />
+                </div>
+              </div>
+              <ShinyButton type="submit" className="w-full h-12 mt-4 text-sm font-semibold">Update Password</ShinyButton>
+            </form>
+          </div>
+        ) : (
+          <>
+            {(view === 'login' || view === 'signup') && (
           <LoginPage 
             type={view} 
             onAuth={(email) => handleAuth(email)}
@@ -560,6 +605,8 @@ export default function App() {
               Back to Home
             </button>
           </div>
+        )}
+          </>
         )}
       </main>
 
